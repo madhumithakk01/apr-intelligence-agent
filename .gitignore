@@ -1,0 +1,10 @@
+.env
+venv/
+__pycache__/
+*.pyc
+knowledge_db/
+reports/
+*.db
+data/
+.env.example
+install_log.txt
