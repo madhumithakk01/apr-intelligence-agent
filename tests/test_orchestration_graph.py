@@ -52,6 +52,8 @@ _REAL_STAGE_QUALITATIVE = nodes._stage_qualitative
 _REAL_BLOCK_CAPABILITIES = nodes.block_capabilities
 _REAL_BUILD_PROFILES = nodes.build_profiles
 _REAL_STAGE_ADJUDICATION = nodes._stage_adjudication
+_REAL_DETECT_COST_OUTLIERS = nodes.detect_cost_outliers
+_REAL_EXPLAIN_COST_OUTLIERS = nodes.explain_cost_outliers
 """Captured at import time, before the autouse fixture below ever runs,
 so a test that wants the real wiring back can restore it explicitly."""
 
@@ -87,34 +89,48 @@ def _fake_stage_adjudication(task):
     return {}
 
 
+def _fake_detect_cost_outliers(state):
+    return {"cost_outliers": list(state.get("cost_outliers") or []), "stage_log": [nodes._stage("detect_cost_outliers")]}
+
+
+def _fake_explain_cost_outliers(state):
+    return {"stage_log": [nodes._stage("explain_cost_outliers")]}
+
+
 @pytest.fixture(autouse=True)
 def _no_real_llm_calls_in_this_file(monkeypatch):
     """This file tests orchestration control flow, not what
     classify_disclosure, calibrate_rubrics, score_row,
-    block_capabilities, build_profiles, or adjudicate_cluster themselves
-    compute (see tests/test_disclosure_classifier.py,
-    tests/test_rubric_calibration.py, tests/test_qualitative_scoring.py,
-    tests/test_blocking.py, tests/test_profile_builder.py,
-    tests/test_redundancy_adjudicator.py, and
-    tests/test_recommendation_policy.py). Autouse so no test here can
-    accidentally reach a real provider -- including on a machine that
+    block_capabilities, build_profiles, adjudicate_cluster, or
+    explain_cost_outliers themselves compute (see
+    tests/test_disclosure_classifier.py, tests/test_rubric_calibration.py,
+    tests/test_qualitative_scoring.py, tests/test_blocking.py,
+    tests/test_profile_builder.py, tests/test_redundancy_adjudicator.py,
+    tests/test_recommendation_policy.py,
+    tests/test_cost_outlier_detection.py, and
+    tests/test_cost_outlier_explainability.py). Autouse so no test here
+    can accidentally reach a real provider -- including on a machine that
     happens to have a real GROQ_API_KEY exported -- and so the rest of
     this file's tests can keep pre-setting state["clusters"]/
     state["profiles"] directly (_full_run_state below) without
-    block_capabilities/build_profiles silently recomputing and
-    overwriting them from state["applications"]. A test that cares about
-    the real wiring restores the captured original above, which simply
-    shadows this fixture's patch for that one test. apply_scoring_kernel
-    and apply_recommendation_policy need no such fake: both are fully
-    deterministic (app.scoring.kernel and
-    app.redundancy.recommendation_policy respectively) and never call a
-    provider regardless."""
+    block_capabilities/build_profiles/detect_cost_outliers silently
+    recomputing and overwriting them, or crashing on the placeholder
+    SYNTHETIC_PROFILES shape when trying to deserialize it as a real
+    ApplicationProfile. A test that cares about the real wiring restores
+    the captured original above, which simply shadows this fixture's
+    patch for that one test. apply_scoring_kernel,
+    apply_recommendation_policy, and detect_cost_outliers need no
+    provider fake for the calls they make (all three are fully
+    deterministic); detect_cost_outliers still gets one here purely to
+    avoid the profile-deserialization crash just described."""
     monkeypatch.setattr(nodes, "_stage_disclosure", _fake_stage_disclosure)
     monkeypatch.setattr(nodes, "calibrate_rubrics", _fake_calibrate_rubrics)
     monkeypatch.setattr(nodes, "_stage_qualitative", _fake_stage_qualitative)
     monkeypatch.setattr(nodes, "block_capabilities", _fake_block_capabilities)
     monkeypatch.setattr(nodes, "build_profiles", _fake_build_profiles)
     monkeypatch.setattr(nodes, "_stage_adjudication", _fake_stage_adjudication)
+    monkeypatch.setattr(nodes, "detect_cost_outliers", _fake_detect_cost_outliers)
+    monkeypatch.setattr(nodes, "explain_cost_outliers", _fake_explain_cost_outliers)
 
 EXPECTED_NODES = {
     "ingest",
@@ -923,6 +939,73 @@ def test_gate_3_fires_on_the_recommendations_own_review_flag_not_only_the_verdic
     verdict = final["verdicts"][0]
     assert "Migrate" in verdict["recommendation"]["recommendation"]
     assert verdict["recommendation"]["mandatory_review"] is True
+
+
+def test_detect_cost_outliers_delegates_to_the_real_module(monkeypatch):
+    """Verifies the wiring this branch adds: detect_cost_outliers builds
+    ApplicationProfile objects from state["profiles"] and calls
+    app.cost_intelligence.outlier_detection.detect_cost_outliers over
+    state["clusters"] -- deterministic, so no provider mocking is needed
+    here at all."""
+    from app.redundancy import profile_builder
+
+    monkeypatch.setattr(nodes, "detect_cost_outliers", _REAL_DETECT_COST_OUTLIERS)
+
+    profiles = {
+        f"SYN-{i:03d}": profile_builder.build_profile(
+            {"application_id": f"SYN-{i:03d}", "fte_count": 1, "annual_fte_cost": cost}
+        ).as_dict()
+        for i, cost in enumerate([10_000, 10_100, 9_900, 10_050, 500_000], start=1)
+    }
+    clusters = [{"cluster_id": "CL-CLAIMS", "application_ids": list(profiles)}]
+
+    graph = build_graph(build_in_memory_checkpointer())
+    final, _ = _run_to_completion(
+        graph, _full_run_state(clusters=clusters, profiles=profiles), run_config("t-cost-outlier-wiring")
+    )
+
+    assert len(final["cost_outliers"]) == 1
+    assert final["cost_outliers"][0]["application_id"] == "SYN-005"
+
+
+def test_explain_cost_outliers_delegates_to_the_real_module_and_wires_gate_4(monkeypatch):
+    """Verifies the wiring this branch adds: explain_cost_outliers calls
+    app.cost_intelligence.explainability.explain_outliers over
+    state["cost_outliers"], and a low-confidence verdict reaches gate 4
+    -- without exercising explainability's own LLM-calling internals
+    (its own test module's job)."""
+    from app.cost_intelligence import explainability
+    from app.redundancy import profile_builder
+
+    monkeypatch.setattr(nodes, "detect_cost_outliers", _REAL_DETECT_COST_OUTLIERS)
+    monkeypatch.setattr(nodes, "explain_cost_outliers", _REAL_EXPLAIN_COST_OUTLIERS)
+
+    def fake_explain_outliers(flags, profiles, *, data_sensitivity):
+        return [
+            {**flag.as_dict(), "explainability": {
+                "explainable": None, "confidence": None,
+                "rationale": "synthetic wiring test", "needs_review": True,
+            }}
+            for flag in flags
+        ]
+
+    monkeypatch.setattr(explainability, "explain_outliers", fake_explain_outliers)
+
+    profiles = {
+        f"SYN-{i:03d}": profile_builder.build_profile(
+            {"application_id": f"SYN-{i:03d}", "fte_count": 1, "annual_fte_cost": cost}
+        ).as_dict()
+        for i, cost in enumerate([10_000, 10_100, 9_900, 10_050, 500_000], start=1)
+    }
+    clusters = [{"cluster_id": "CL-CLAIMS", "application_ids": list(profiles)}]
+
+    graph = build_graph(build_in_memory_checkpointer())
+    final, stops = _run_to_completion(
+        graph, _full_run_state(clusters=clusters, profiles=profiles), run_config("t-explain-wiring")
+    )
+
+    assert gates.GATE_COST_OUTLIER in stops
+    assert final["cost_outliers"][0]["explainability"]["needs_review"] is True
 
 
 def test_run_input_defaults_to_real_data_sensitivity():
