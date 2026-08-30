@@ -10,8 +10,6 @@ exactly one place to look before hardcoding locally -- see each
 section's "Owned by" note.
 """
 
-from typing import Optional
-
 # --- Consumed by scoring/kernel.py ---
 
 TIME_WEIGHTS = {"value": 0.45, "health": 0.35, "consolidation": 0.20}
@@ -51,20 +49,51 @@ MARKET_PRODUCT_BONUS_CAP = 10
 market products, each worth MARKET_PRODUCT_BONUS_PER_PRODUCT points.
 Same carried-over, undocumented-rationale status as COTS_FIT_WEIGHTS."""
 
-# --- Not yet consumed by any existing branch. Transcribed now so every
-# governance number has exactly one home from the start (CLAUDE.md
-# section 12: "No second copy anywhere else in the codebase"). Each
-# MUST be read from here, never re-hardcoded, once its owning branch
-# lands. ---
+# --- Consumed by qualitative_scoring/scorer.py (branch 8) ---
 
 QUALITATIVE_ENSEMBLE_SIZE = 3
-"""Owned by: feat/qualitative-scoring (branch 8)."""
+"""Fixed (CLAUDE.md section 12). The default single call, when a field
+is escalated, counts as the first of these 3 samples -- 2 more calls are
+made to reach it, not 3 fresh ones."""
 
 QUALITATIVE_ENSEMBLE_DISAGREEMENT = {
     "auto_accept_max_range": 1,
     "mandatory_review_min_range": 2,
 }
-"""Owned by: feat/qualitative-scoring (branch 8)."""
+"""Fixed (CLAUDE.md section 12). Range is measured in points on the
+kernel's 1-5 scale across the ensemble's valid samples. These two
+values are consecutive integers by design -- every possible range (0-4
+points, since the scale spans 1-5) falls into exactly one bucket, with
+no undefined gap between "auto-accept" and "mandatory review"."""
+
+QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD: float = 0.7
+"""CLAUDE.md section 7: escalate to the 3-sample ensemble when the
+model's own self-reported confidence (0.0-1.0) on the default single
+call falls below this. 0.7 is a reasoned default, not yet empirically
+tuned: informal consensus in LLM-confidence-calibration practice is that
+self-reported confidence above roughly this level correlates with
+actual correctness meaningfully better than below it, but that is a
+general heuristic, not evidence from this system's own data. PENDING
+validation against the golden subset once a labelled qualitative-scoring
+column exists there (tests/golden_subset section 12 note) -- do not
+treat as final, and do not lower it to reduce escalation volume without
+re-deriving it from data."""
+
+QUALITATIVE_ENSEMBLE_TEMPERATURE = 0.7
+"""Not itemized in CLAUDE.md section 12's table; the ensemble's whole
+point is 3 independent-ish samples to measure disagreement, which
+temperature 0.0 (used for the deterministic default call and for every
+other structured call in this codebase) cannot produce -- three
+temperature-0.0 samples of the same prompt would trivially agree every
+time, making the ensemble meaningless. 0.7 is a conventional
+moderate-diversity value for a classification-style task; not yet
+validated against the golden subset."""
+
+# --- Not yet consumed by any existing branch. Transcribed now so every
+# governance number has exactly one home from the start (CLAUDE.md
+# section 12: "No second copy anywhere else in the codebase"). Each
+# MUST be read from here, never re-hardcoded, once its owning branch
+# lands. ---
 
 REDUNDANCY_ENSEMBLE_SIZE = 3
 """Owned by: feat/redundancy-adjudicator (branch 10)."""
@@ -77,9 +106,3 @@ MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER = 5
 """Owned by: feat/cost-outlier-detection (branch 11). Below this
 cluster size, refuse to flag a cost outlier rather than manufacture a
 signal from noise."""
-
-QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD: Optional[float] = None
-"""Not yet set. CLAUDE.md section 12: tune against the golden subset
-before hardcoding -- do not guess a value without recording the
-rationale. Owned by: feat/qualitative-scoring (branch 8); must stay
-None until that branch records an empirically-justified value here."""

@@ -48,6 +48,7 @@ from synthetic_fixtures import (
 
 _REAL_STAGE_DISCLOSURE = nodes._stage_disclosure
 _REAL_CALIBRATE_RUBRICS = nodes.calibrate_rubrics
+_REAL_STAGE_QUALITATIVE = nodes._stage_qualitative
 """Captured at import time, before the autouse fixture below ever runs,
 so a test that wants the real wiring back can restore it explicitly."""
 
@@ -67,18 +68,26 @@ def _fake_calibrate_rubrics(state):
     }
 
 
+def _fake_stage_qualitative(task):
+    return {}
+
+
 @pytest.fixture(autouse=True)
 def _no_real_llm_calls_in_this_file(monkeypatch):
     """This file tests orchestration control flow, not what
-    classify_disclosure or calibrate_rubrics themselves compute (see
-    tests/test_disclosure_classifier.py and
-    tests/test_rubric_calibration.py). Autouse so no test here can
+    classify_disclosure, calibrate_rubrics, or score_row themselves
+    compute (see tests/test_disclosure_classifier.py,
+    tests/test_rubric_calibration.py, and
+    tests/test_qualitative_scoring.py). Autouse so no test here can
     accidentally reach a real provider -- including on a machine that
     happens to have a real GROQ_API_KEY exported. A test that cares about
     the real wiring restores the captured original above, which simply
-    shadows this fixture's patch for that one test."""
+    shadows this fixture's patch for that one test. apply_scoring_kernel
+    needs no such fake: it is fully deterministic (app.scoring.kernel)
+    and never calls a provider regardless."""
     monkeypatch.setattr(nodes, "_stage_disclosure", _fake_stage_disclosure)
     monkeypatch.setattr(nodes, "calibrate_rubrics", _fake_calibrate_rubrics)
+    monkeypatch.setattr(nodes, "_stage_qualitative", _fake_stage_qualitative)
 
 EXPECTED_NODES = {
     "ingest",
@@ -330,21 +339,27 @@ def test_each_queue_driven_gate_fires_on_its_own_review_items(gate):
 
 
 def test_review_items_enqueued_by_a_fanned_out_branch_reach_their_gate(monkeypatch):
-    """The realistic path: a worker branch decides mid-run that its row
-    needs review, and the gate downstream of the join picks it up."""
+    """The realistic path: a worker branch decides mid-run that one of
+    its fields needs review (score_row's real needs_review contract,
+    CLAUDE.md section 7), and the gate downstream of the join picks it
+    up."""
 
     def flag_ambiguous_row(task):
         if task["application"]["application_id"] != "SYN-002":
             return {}
         return {
-            "review_items": [
-                {
-                    "gate": gates.GATE_QUALITATIVE_DISAGREEMENT,
-                    "subject_id": "SYN-002",
-                    "reason": "synthetic fixture: ensemble range >= 2",
-                    "payload": {},
-                }
-            ]
+            "business_criticality": {
+                "field": "business_criticality",
+                "raw_value": "x",
+                "label": "medium",
+                "points": 3,
+                "confidence_label": "low",
+                "source": "ensemble",
+                "needs_review": True,
+                "rationale": "synthetic fixture: ensemble range >= 2",
+                "rubric_agreement": None,
+                "ensemble_samples": None,
+            }
         }
 
     monkeypatch.setattr(nodes, "_stage_qualitative", flag_ambiguous_row)
@@ -638,6 +653,118 @@ def test_calibrate_rubrics_skips_a_row_whose_disclosure_branch_failed(monkeypatc
     _run_to_completion(graph, _full_run_state(applications=applications), run_config("t-rubric-partial-disclosure"))
 
     assert calls == [[{"application_id": "SYN-001", "business_criticality": "Strategic"}]]
+
+
+def test_score_row_delegates_to_the_real_scorer(monkeypatch):
+    """Verifies the wiring this branch adds -- that the stage hook calls
+    app.qualitative_scoring.scorer.score_row with the row's
+    disclosure-gated data, the run's rubrics, and its sensitivity flag --
+    without exercising the scorer's own LLM-calling internals (its own
+    test module's job)."""
+    from app.qualitative_scoring import scorer as qualitative_scorer
+
+    monkeypatch.setattr(nodes, "_stage_qualitative", _REAL_STAGE_QUALITATIVE)
+
+    calls = []
+
+    def fake_score_row(gated_application, rubrics, *, application_id, data_sensitivity):
+        calls.append((application_id, gated_application.get("application_id"), rubrics, data_sensitivity))
+        return {}
+
+    monkeypatch.setattr(qualitative_scorer, "score_row", fake_score_row)
+
+    applications = [{"application_id": "SYN-001"}, {"application_id": "SYN-002"}]
+    graph = build_graph(build_in_memory_checkpointer())
+    final, _ = _run_to_completion(
+        graph, _full_run_state(applications=applications), run_config("t-score-row-wiring")
+    )
+
+    from app.llm.providers import DataSensitivity
+
+    # The autouse fake calibrate_rubrics proposes {"status": "proposed", ...},
+    # and approving gate 1 (the default resume) freezes it to signed_off --
+    # this is the same `rubrics` every score_row call receives.
+    signed_off_rubrics = final["rubrics"]
+    assert signed_off_rubrics["status"] == "signed_off"
+    assert sorted(calls) == [
+        ("SYN-001", "SYN-001", signed_off_rubrics, DataSensitivity.SYNTHETIC),
+        ("SYN-002", "SYN-002", signed_off_rubrics, DataSensitivity.SYNTHETIC),
+    ]
+
+
+def test_score_row_only_fans_out_to_rows_with_a_disclosure_result(monkeypatch):
+    """A row whose disclosure branch failed has no gated_application to
+    give the scorer -- it must not fall back to the raw ungated value."""
+    from app.qualitative_scoring import scorer as qualitative_scorer
+
+    monkeypatch.setattr(nodes, "_stage_qualitative", _REAL_STAGE_QUALITATIVE)
+
+    def fail_for_syn_002(task):
+        if task["application"]["application_id"] == "SYN-002":
+            raise RuntimeError("synthetic branch failure")
+        return _fake_stage_disclosure(task)
+
+    monkeypatch.setattr(nodes, "_stage_disclosure", fail_for_syn_002)
+
+    calls = []
+    monkeypatch.setattr(
+        qualitative_scorer, "score_row",
+        lambda gated_application, rubrics, *, application_id, data_sensitivity: calls.append(application_id) or {},
+    )
+
+    applications = [{"application_id": "SYN-001"}, {"application_id": "SYN-002"}]
+    graph = build_graph(build_in_memory_checkpointer())
+    _run_to_completion(graph, _full_run_state(applications=applications), run_config("t-score-row-partial"))
+
+    assert calls == ["SYN-001"]
+
+
+def test_apply_scoring_kernel_reads_gated_costs_and_resolved_qualitative_labels():
+    """Verifies the wiring this branch adds: apply_scoring_kernel builds
+    kernel.ScoringInput from the disclosure-gated application (identity
+    and cost fields) and the qualitative scorer's resolved labels (TIM-E
+    axes) -- the exact scoring arithmetic is
+    tests/test_scoring_kernel.py's job, not this one's."""
+    scored_axes = [
+        "business_criticality", "strategic_relevance", "business_fitness", "usage_adoption",
+        "application_stability", "maintainability", "availability", "reliability", "scalability",
+        "functional_redundancy",
+    ]
+
+    def fake_stage_qualitative(task):
+        return {
+            field: {
+                "field": field, "raw_value": "x", "label": "very high", "points": 5,
+                "confidence_label": "high", "source": "single_call", "needs_review": False,
+                "rationale": "r", "rubric_agreement": True, "ensemble_samples": None,
+            }
+            for field in scored_axes
+        }
+
+    applications = [
+        {
+            "application_id": "SYN-001",
+            "application_name": "Synthetic App",
+            "business_capability_l2": "L2",
+            "business_capability_l3": "L3",
+            "annual_fte_cost": 100000,
+            "annual_license_cost": 50000,
+            "annual_infrastructure_cost": 20000,
+            "other_costs": 1000,
+        }
+    ]
+
+    graph = build_graph(build_in_memory_checkpointer())
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(nodes, "_stage_qualitative", fake_stage_qualitative)
+        final, _ = _run_to_completion(
+            graph, _full_run_state(applications=applications), run_config("t-kernel-wiring")
+        )
+
+    result = final["kernel_results"]["SYN-001"]
+    assert result["tim_e_score"] is not None
+    assert result["tim_e_decision"] == "Invest"
+    assert result["floor_applied"] is None
 
 
 def test_run_input_defaults_to_real_data_sensitivity():
