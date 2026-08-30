@@ -165,6 +165,33 @@ class ApplicationProfile:
             "functional_redundancy_self_report": self.functional_redundancy_self_report,
         }
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ApplicationProfile":
+        """The reverse of as_dict() -- profiles cross the orchestration
+        graph's checkpoint boundary as plain dicts (app.orchestration.state
+        stores GraphState as JSON-serializable data), so a consumer that
+        needs the typed dataclass back (the adjudicator, branch 10) uses
+        this rather than re-deriving axis objects field by field."""
+        functional = data["functional"]
+        technical = data["technical"]
+        return cls(
+            application_id=data["application_id"],
+            functional=FunctionalAxis(
+                capability_l1=functional["capability_l1"],
+                capability_l2=functional["capability_l2"],
+                capability_l3=functional["capability_l3"],
+                description_tokens=tuple(functional["description_tokens"]),
+            ),
+            scale_usage=ScaleUsageAxis(**data["scale_usage"]),
+            cost=CostAxis(**data["cost"]),
+            risk_classification=RiskClassificationAxis(**data["risk_classification"]),
+            technical=TechnicalAxis(
+                technology_stack_tokens=tuple(technical["technology_stack_tokens"]),
+                maintainability=technical["maintainability"],
+            ),
+            functional_redundancy_self_report=data["functional_redundancy_self_report"],
+        )
+
 
 def _technology_stack_tokens(raw_stack: Optional[str]) -> Tuple[str, ...]:
     """Component-level tokens, not free-text tokens: "Dynamics 365,
