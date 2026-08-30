@@ -248,7 +248,9 @@ def test_governance_params_values_match_claude_md():
     assert gp.REDUNDANCY_ENSEMBLE_SIZE == 3
     assert gp.MARKET_AGENT_ITERATION_CAP == 4
     assert gp.MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER == 5
-    assert gp.QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD is None
+    # QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD: set by feat/qualitative-scoring
+    # (branch 8), not itemized in CLAUDE.md section 12's table as a fixed value --
+    # see tests/test_qualitative_scoring.py for its own governance-params coverage.
 
 
 def test_score_application_end_to_end():

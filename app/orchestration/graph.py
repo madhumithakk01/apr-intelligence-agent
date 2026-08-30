@@ -1,10 +1,11 @@
 """Top-level orchestration StateGraph -- CLAUDE.md sections 5, 10, 13.
 
-The pipeline's control flow, and only its control flow. Every stage node
-is a pass-through stub (app/orchestration/nodes.py) and the only real
-behavior on this branch is structural: stage order, three ``Send``
-fan-outs, the five ``interrupt()`` gates, and a checkpointer that makes
-a suspended run resumable.
+The pipeline's control flow, and only its control flow: stage order,
+three ``Send`` fan-outs, the five ``interrupt()`` gates, and a
+checkpointer that makes a suspended run resumable. What each stage node
+does is out of scope for this file (app/orchestration/nodes.py); most
+are still pass-through stubs, and ingest/classify_disclosure have been
+real since feat/disclosure-classifier (branch 6).
 
 Building the topology before any stage exists is deliberate. This is a
 portfolio-scale batch pipeline whose stages are individually cheap to
@@ -61,15 +62,28 @@ def _fan_out_disclosure(state: GraphState) -> Union[str, List[Send]]:
 
 
 def _fan_out_qualitative(state: GraphState) -> Union[str, List[Send]]:
-    applications = state.get("applications") or []
-    if not applications:
-        return "gate_qualitative_disagreement"
+    """One branch per row that has a disclosure result -- score_row must
+    only ever see the disclosure-gated application dict (CLAUDE.md
+    section 2: a withheld field is never scored), never the raw one. A
+    row whose disclosure branch failed has no gated_application to give
+    it and is simply excluded, the same way apply_scoring_kernel's own
+    'no disclosure result' handling degrades: skipped, never a fallback
+    to the raw ungated value."""
+    disclosure = state.get("disclosure") or {}
     context = _run_context(state)
     rubrics = state.get("rubrics") or {}
-    return [
-        Send("score_row", {**context, "application": application, "rubrics": rubrics})
-        for application in applications
-    ]
+
+    sends: List[Send] = []
+    for application in state.get("applications") or []:
+        application_id = application.get("application_id")
+        entry = disclosure.get(application_id) if application_id else None
+        if not entry or "gated_application" not in entry:
+            continue
+        sends.append(
+            Send("score_row", {**context, "application": entry["gated_application"], "rubrics": rubrics})
+        )
+
+    return sends if sends else "gate_qualitative_disagreement"
 
 
 def _fan_out_adjudication(state: GraphState) -> Union[str, List[Send]]:

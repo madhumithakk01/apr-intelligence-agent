@@ -86,20 +86,51 @@ class GraphState(TypedDict, total=False):
     data_sensitivity: str
     """"real" | "synthetic" -- CLAUDE.md section 11's routing flag, carried
     on the run itself so every LLM-backed stage inherits one declared
-    value instead of deciding locally. No stage on this branch makes an
-    LLM call; the field exists so the stages that will cannot forget to
-    pass it to llm.providers.get_completion."""
+    value instead of deciding locally. Passed to llm.providers.get_completion
+    by every stage that calls it, starting with disclosure classification
+    (branch 6)."""
+
+    dataset_path: Optional[str]
+    """Excel workbook to load if `applications` isn't already populated
+    (app.orchestration.nodes.ingest). Omitted (or `applications` supplied
+    directly) is how tests and any future caller that already has rows in
+    hand bypass the file entirely."""
 
     applications: List[Dict[str, Any]]
-    """Ingested rows, one per application. Deterministic stage --
-    app/ingestion already owns the real parsing (branch 2)."""
+    """Ingested rows, one per application, ApplicationInput-shaped
+    (app.ingestion.row_mapping). Loaded from `dataset_path` via
+    app.ingestion.excel_loader.ExcelLoader when not supplied directly."""
+
+    ingestion_collisions: List[Dict[str, Any]]
+    """Application IDs that occurred more than once in the loaded
+    workbook. Surfaced, never silently dropped (CLAUDE.md section 4 bug
+    7) -- every colliding row is excluded from `applications` rather than
+    picking a first-write winner."""
 
     disclosure: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
-    """application_id -> per-field provenance categories (section 6).
-    Gates every downstream scoring step for that field."""
+    """application_id -> {"results": {field: DisclosureResult-as-dict},
+    "gated_application": application dict with every non-Answered field
+    nulled out} (section 6). Gates every downstream scoring step for the
+    field it classifies."""
+
+    phase2_agenda: Annotated[List[Dict[str, Any]], extend]
+    """One item per non-Answered classified field, across every
+    application -- the disclosure classifier's output doubling as the
+    Phase 2 discovery/interview agenda (section 6)."""
 
     rubrics: Dict[str, Dict[str, Any]]
+    """{"status": "proposed" | "signed_off" | "rejected", "fields": {field:
+    app.rubric.calibration.FieldRubric-as-dict}} (section 7). Proposed by
+    app.orchestration.nodes.calibrate_rubrics, one call per field per
+    engagement over disclosure-gated values only; frozen to "signed_off"
+    or "rejected" by gate 1 (gates.gate_rubric_signoff) before any row is
+    scored."""
+
     rubric_signoff: Dict[str, Any]
+    """{"signed_off": bool, "decision": <verbatim resume value>} -- the
+    gate's own record of gate 1's outcome, separate from `rubrics` so a
+    consumer can check sign-off without re-deriving it from rubric status
+    strings."""
 
     qualitative_scores: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
     kernel_results: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
