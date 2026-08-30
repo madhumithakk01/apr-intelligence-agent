@@ -37,6 +37,7 @@ from app.orchestration.checkpointer import (
 )
 from app.orchestration.graph import build_graph, initial_state, run_config
 from app.orchestration.state import extend, merge_by_key
+from app.rubric import calibration as rubric_calibration
 from synthetic_fixtures import (
     SYNTHETIC_APPLICATIONS,
     SYNTHETIC_CLUSTERS,
@@ -46,20 +47,38 @@ from synthetic_fixtures import (
 
 
 _REAL_STAGE_DISCLOSURE = nodes._stage_disclosure
+_REAL_CALIBRATE_RUBRICS = nodes.calibrate_rubrics
 """Captured at import time, before the autouse fixture below ever runs,
 so a test that wants the real wiring back can restore it explicitly."""
 
 
-@pytest.fixture(autouse=True)
-def _no_real_disclosure_llm_calls(monkeypatch):
-    def fake_stage_disclosure(task):
-        return {
-            "results": {},
-            "gated_application": dict(task.get("application") or {}),
-            "phase2_agenda": [],
-        }
+def _fake_stage_disclosure(task):
+    return {
+        "results": {},
+        "gated_application": dict(task.get("application") or {}),
+        "phase2_agenda": [],
+    }
 
-    monkeypatch.setattr(nodes, "_stage_disclosure", fake_stage_disclosure)
+
+def _fake_calibrate_rubrics(state):
+    return {
+        "rubrics": {"status": "proposed", "fields": {}},
+        "stage_log": [nodes._stage("calibrate_rubrics")],
+    }
+
+
+@pytest.fixture(autouse=True)
+def _no_real_llm_calls_in_this_file(monkeypatch):
+    """This file tests orchestration control flow, not what
+    classify_disclosure or calibrate_rubrics themselves compute (see
+    tests/test_disclosure_classifier.py and
+    tests/test_rubric_calibration.py). Autouse so no test here can
+    accidentally reach a real provider -- including on a machine that
+    happens to have a real GROQ_API_KEY exported. A test that cares about
+    the real wiring restores the captured original above, which simply
+    shadows this fixture's patch for that one test."""
+    monkeypatch.setattr(nodes, "_stage_disclosure", _fake_stage_disclosure)
+    monkeypatch.setattr(nodes, "calibrate_rubrics", _fake_calibrate_rubrics)
 
 EXPECTED_NODES = {
     "ingest",
@@ -214,6 +233,53 @@ def test_clean_run_stops_only_at_rubric_signoff():
 
     assert stops == [gates.GATE_RUBRIC_SIGNOFF]
     assert final["rubric_signoff"] == {"signed_off": True, "decision": "approved"}
+    assert final["rubrics"]["status"] == "signed_off"
+
+
+def test_approving_gate_1_freezes_the_proposed_rubric_fields_unchanged():
+    graph = build_graph(build_in_memory_checkpointer())
+    config = run_config("t-approve-preserves-fields")
+    graph.invoke(_full_run_state(), config)
+    paused_fields = graph.get_state(config).values["rubrics"]["fields"]
+
+    final = graph.invoke(Command(resume="approved"), config)
+
+    assert final["rubrics"]["fields"] == paused_fields
+    assert final["rubrics"]["status"] == "signed_off"
+
+
+def test_rejecting_gate_1_freezes_status_to_rejected_but_keeps_the_proposal():
+    graph = build_graph(build_in_memory_checkpointer())
+    config = run_config("t-reject-rubrics")
+    graph.invoke(_full_run_state(), config)
+    paused_fields = graph.get_state(config).values["rubrics"]["fields"]
+
+    final = graph.invoke(Command(resume={"action": "reject"}), config)
+
+    assert final["rubric_signoff"] == {"signed_off": False, "decision": {"action": "reject"}}
+    assert final["rubrics"]["status"] == "rejected"
+    assert final["rubrics"]["fields"] == paused_fields
+
+
+@pytest.mark.parametrize(
+    "decision, approved",
+    [
+        ("approved", True),
+        ({"action": "approve"}, True),
+        ({"action": "approved"}, True),
+        ({"signed_off": True}, True),
+        ({"action": "reject"}, False),
+        ({"action": "reject", "reason": "anchors look wrong"}, False),
+        ({"signed_off_by": "internal-reviewer", "verdict": "rejected"}, False),
+        ({"signed_off": False}, False),
+        ("rejected", False),
+        (None, False),
+        ({}, False),
+        ({"action": "APPROVE"}, False),  # case-sensitive: no silent normalization
+    ],
+)
+def test_signoff_approval_parsing_fails_closed_on_anything_unrecognized(decision, approved):
+    assert gates._is_signoff_approved(decision) is approved
 
 
 def test_rubric_gate_blocks_before_any_row_is_scored():
@@ -506,6 +572,72 @@ def test_classify_disclosure_delegates_to_the_real_classifier(monkeypatch):
     assert sorted(calls) == [
         (app["application_id"], DataSensitivity.SYNTHETIC) for app in SYNTHETIC_APPLICATIONS
     ]
+
+
+def test_calibrate_rubrics_delegates_to_the_real_module(monkeypatch):
+    """Verifies the wiring this branch adds -- that the node hands the
+    disclosure-gated applications and the run's sensitivity flag to
+    app.rubric.calibration.calibrate_rubrics -- without exercising that
+    module's own LLM-calling internals (its own test module's job).
+    Restores the real calibrate_rubrics over this file's blanket autouse
+    fake, then substitutes the module-level function it calls so the
+    assertion below never reaches a real provider."""
+    monkeypatch.setattr(nodes, "_stage_disclosure", _REAL_STAGE_DISCLOSURE)
+    monkeypatch.setattr(nodes, "calibrate_rubrics", _REAL_CALIBRATE_RUBRICS)
+
+    calls = []
+
+    def fake_calibrate(gated_applications, *, data_sensitivity):
+        calls.append((tuple(sorted(app["application_id"] for app in gated_applications)), data_sensitivity))
+        return {}
+
+    monkeypatch.setattr(rubric_calibration, "calibrate_rubrics", fake_calibrate)
+
+    applications = [
+        {"application_id": "SYN-001", "business_criticality": "Strategic"},
+        {"application_id": "SYN-002", "business_criticality": "Supports core processes"},
+    ]
+    graph = build_graph(build_in_memory_checkpointer())
+    _run_to_completion(graph, _full_run_state(applications=applications), run_config("t-rubric-wiring"))
+
+    from app.llm.providers import DataSensitivity
+
+    assert calls == [(("SYN-001", "SYN-002"), DataSensitivity.SYNTHETIC)]
+
+
+def test_calibrate_rubrics_skips_a_row_whose_disclosure_branch_failed(monkeypatch):
+    """A row absent from state["disclosure"] (its branch failed --
+    branch_failures, not a result) must not fall back to its raw ungated
+    value -- there is no confirmation it was actually answered."""
+    monkeypatch.setattr(nodes, "calibrate_rubrics", _REAL_CALIBRATE_RUBRICS)
+
+    def fail_for_syn_002(task):
+        if task["application"]["application_id"] == "SYN-002":
+            raise RuntimeError("synthetic branch failure")
+        return {
+            "results": {},
+            "gated_application": dict(task["application"]),
+            "phase2_agenda": [],
+        }
+
+    monkeypatch.setattr(nodes, "_stage_disclosure", fail_for_syn_002)
+
+    calls = []
+
+    def fake_calibrate(gated_applications, *, data_sensitivity):
+        calls.append(list(gated_applications))
+        return {}
+
+    monkeypatch.setattr(rubric_calibration, "calibrate_rubrics", fake_calibrate)
+
+    applications = [
+        {"application_id": "SYN-001", "business_criticality": "Strategic"},
+        {"application_id": "SYN-002", "business_criticality": "Supports core processes"},
+    ]
+    graph = build_graph(build_in_memory_checkpointer())
+    _run_to_completion(graph, _full_run_state(applications=applications), run_config("t-rubric-partial-disclosure"))
+
+    assert calls == [[{"application_id": "SYN-001", "business_criticality": "Strategic"}]]
 
 
 def test_run_input_defaults_to_real_data_sensitivity():
