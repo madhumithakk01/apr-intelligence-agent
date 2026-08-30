@@ -1,17 +1,15 @@
-"""Pass-through stage stubs for the orchestration graph.
+"""Pipeline stage nodes for the orchestration graph.
 
-Every node here is a deliberate stub. This branch builds the control
-flow -- topology, checkpointing, fan-out, and the five interrupt()
-gates -- and nothing else: no LLM call, no scoring, no market lookup.
-The stubs exist so the state machine can be executed and tested against
-synthetic fixtures before a single real stage is wired into it, which is
-also why they are honest about it: each records
-``implemented_by_branch`` in the stage log rather than returning a
-plausible-looking fake result. A stub that invented an output would let
-a later branch's tests pass for the wrong reason.
-
-IMPLEMENTED_BY below maps each stage to the branch that replaces its
-stub (numbering per the repository's branch sequence).
+Most nodes here are still deliberate stubs (IMPLEMENTED_BY records which
+future branch replaces each one, and each stub is honest about it rather
+than returning a plausible-looking fake result -- a stub that invented
+an output would let a later branch's tests pass for the wrong reason).
+``ingest`` and ``classify_disclosure`` are real as of
+feat/disclosure-classifier (branch 6): the first genuinely loads and
+safely parses the client workbook (app/ingestion), the second makes this
+system's first genuine LLM call (app/disclosure/classifier.py). LANDED_BY
+records that transition the same way IMPLEMENTED_BY records a pending
+one, so the stage log always says which is which.
 
 Fan-out workers (``classify_disclosure``, ``score_row``,
 ``adjudicate_cluster``, ``research_segment``) never raise past their own
@@ -23,8 +21,13 @@ is testable by substituting one.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict
 
+from app.disclosure import classifier as disclosure_classifier
+from app.ingestion.excel_loader import ExcelLoader
+from app.ingestion.row_mapping import build_application_fields
+from app.llm.providers import DataSensitivity
 from app.orchestration.state import (
     ClusterTask,
     GraphState,
@@ -33,9 +36,9 @@ from app.orchestration.state import (
     StageStatus,
 )
 
+logger = logging.getLogger(__name__)
+
 IMPLEMENTED_BY = {
-    "ingest": "fix/ingestion-integrity (2, landed -- wiring deferred to branch 6)",
-    "classify_disclosure": "feat/disclosure-classifier (6)",
     "calibrate_rubrics": "feat/rubric-calibration (7)",
     "score_row": "feat/qualitative-scoring (8)",
     "apply_scoring_kernel": "refactor/scoring-kernel-consolidation (3, landed -- wiring deferred to branch 8)",
@@ -51,8 +54,15 @@ IMPLEMENTED_BY = {
     "render_report": "feat/report-rendering-consolidation (15)",
 }
 
+LANDED_BY = {
+    "ingest": "fix/ingestion-integrity (2) + feat/disclosure-classifier (6, wiring)",
+    "classify_disclosure": "feat/disclosure-classifier (6)",
+}
+
 
 def _stage(name: str) -> StageStatus:
+    if name in LANDED_BY:
+        return StageStatus(stage=name, status="complete", implemented_by_branch=LANDED_BY[name])
     return StageStatus(stage=name, status="stub", implemented_by_branch=IMPLEMENTED_BY[name])
 
 
@@ -64,11 +74,46 @@ def _failure(kind: str, subject_id: str, error: BaseException) -> Dict[str, Any]
 
 
 def ingest(state: GraphState) -> Dict[str, Any]:
-    """Pass-through. The real loader/validator/dedup path already exists
-    in app/ingestion (branch 2); it is wired in at branch 6, once the
-    disclosure classifier gives its output somewhere to go. Applications
-    are supplied in the run input state until then."""
-    return {"applications": list(state.get("applications") or []), "stage_log": [_stage("ingest")]}
+    """Applications supplied directly in the run's input state pass
+    through unchanged -- this is how tests and any future caller that
+    already holds rows (e.g. branch 16's async submit endpoint, once it
+    exists) skip the file entirely. Otherwise, load `dataset_path`
+    through the real deterministic loader (CLAUDE.md section 5):
+    ExcelLoader, duplicate-Application-ID surfacing, and safe cost/count
+    parsing (app.ingestion.row_mapping) that treats a non-numeric cost
+    cell as unparsed rather than crashing the batch (section 4 bug 6).
+
+    Colliding Application IDs are excluded from `applications` and
+    recorded in `ingestion_collisions` -- never silently dropped in favor
+    of a first-write winner (section 4 bug 7)."""
+    applications = state.get("applications") or []
+    if applications:
+        return {"applications": list(applications), "stage_log": [_stage("ingest")]}
+
+    dataset_path = state.get("dataset_path")
+    if not dataset_path:
+        return {"applications": [], "stage_log": [_stage("ingest")]}
+
+    frame = ExcelLoader(dataset_path).load()
+    collisions = ExcelLoader.find_duplicate_application_ids(frame)
+    skip_ids = set(collisions.keys())
+
+    loaded: list = []
+    for _, row in frame.iterrows():
+        application_id = str(row["Application ID"]).strip()
+        if application_id in skip_ids:
+            continue
+        loaded.append(build_application_fields(row, application_id=application_id))
+
+    collision_records = [
+        {"application_id": application_id, "occurrences": occurrences}
+        for application_id, occurrences in collisions.items()
+    ]
+    return {
+        "applications": loaded,
+        "ingestion_collisions": collision_records,
+        "stage_log": [_stage("ingest")],
+    }
 
 
 def calibrate_rubrics(state: GraphState) -> Dict[str, Any]:
@@ -148,8 +193,32 @@ def render_report(state: GraphState) -> Dict[str, Any]:
 # assert that the surviving branches still complete.
 
 
+def _data_sensitivity(task: RowTask) -> DataSensitivity:
+    """Fails closed: an unrecognized or missing flag is treated as real
+    client data, matching graph.initial_state's default (CLAUDE.md
+    section 11) -- a run can only reach Gemini by explicitly declaring
+    itself synthetic, never by a blank or malformed flag."""
+    if task.get("data_sensitivity") == "synthetic":
+        return DataSensitivity.SYNTHETIC
+    return DataSensitivity.REAL
+
+
 def _stage_disclosure(task: RowTask) -> Dict[str, Any]:
-    return {}
+    """CLAUDE.md section 6. Single structured LLM call per row
+    (app/disclosure/classifier.py), gating every field it classifies out
+    of downstream scoring unless the client actually answered it."""
+    application = task.get("application") or {}
+    application_id = _row_id(task)
+    results = disclosure_classifier.classify_row(
+        application, application_id=application_id, data_sensitivity=_data_sensitivity(task)
+    )
+    return {
+        "results": {field: result.as_dict() for field, result in results.items()},
+        "gated_application": disclosure_classifier.apply_disclosure_gate(application, results),
+        "phase2_agenda": disclosure_classifier.build_phase2_agenda(
+            application_id, application.get("application_name"), results
+        ),
+    }
 
 
 def _stage_qualitative(task: RowTask) -> Dict[str, Any]:
@@ -169,7 +238,11 @@ def _row_id(task: RowTask) -> str:
 
 
 def classify_disclosure(task: RowTask) -> Dict[str, Any]:
-    """One fanned-out branch per application row (section 6)."""
+    """One fanned-out branch per application row (section 6). A
+    classification failure for this row is recorded and the row's
+    disclosure result is simply absent from state -- every field on it
+    stays unscored downstream (never defaulted to Answered), and the
+    other rows' branches are unaffected (section 8)."""
     subject = _row_id(task)
     try:
         result = _stage_disclosure(task)
@@ -178,7 +251,11 @@ def classify_disclosure(task: RowTask) -> Dict[str, Any]:
             "branch_failures": [_failure("disclosure", subject, exc)],
             "stage_log": [_stage("classify_disclosure")],
         }
-    return {"disclosure": {subject: result}, "stage_log": [_stage("classify_disclosure")]}
+    update: Dict[str, Any] = {"disclosure": {subject: result}, "stage_log": [_stage("classify_disclosure")]}
+    agenda = result.get("phase2_agenda")
+    if agenda:
+        update["phase2_agenda"] = list(agenda)
+    return update
 
 
 def score_row(task: RowTask) -> Dict[str, Any]:
