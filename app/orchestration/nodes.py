@@ -4,19 +4,20 @@ Most nodes here are still deliberate stubs (IMPLEMENTED_BY records which
 future branch replaces each one, and each stub is honest about it rather
 than returning a plausible-looking fake result -- a stub that invented
 an output would let a later branch's tests pass for the wrong reason).
-``ingest`` and ``classify_disclosure`` are real as of
-feat/disclosure-classifier (branch 6): the first genuinely loads and
-safely parses the client workbook (app/ingestion), the second makes this
-system's first genuine LLM call (app/disclosure/classifier.py). LANDED_BY
-records that transition the same way IMPLEMENTED_BY records a pending
-one, so the stage log always says which is which.
+``ingest`` and ``classify_disclosure`` have been real since
+feat/disclosure-classifier (branch 6); ``calibrate_rubrics`` joins them
+as of feat/rubric-calibration (branch 7). LANDED_BY records that
+transition the same way IMPLEMENTED_BY records a pending one, so the
+stage log always says which is which.
 
 Fan-out workers (``classify_disclosure``, ``score_row``,
 ``adjudicate_cluster``, ``research_segment``) never raise past their own
 branch: a failure is recorded in ``branch_failures`` for that subject and
 the remaining branches finish normally (CLAUDE.md section 8). Each
 delegates its body to a ``_stage_*`` function purely so that isolation
-is testable by substituting one.
+is testable by substituting one. ``calibrate_rubrics`` is a linear node,
+not fanned out, and has no such split -- there is exactly one call site
+(app.rubric.calibration.calibrate_rubrics) for a test to substitute.
 """
 
 from __future__ import annotations
@@ -35,11 +36,11 @@ from app.orchestration.state import (
     SegmentTask,
     StageStatus,
 )
+from app.rubric import calibration as rubric_calibration
 
 logger = logging.getLogger(__name__)
 
 IMPLEMENTED_BY = {
-    "calibrate_rubrics": "feat/rubric-calibration (7)",
     "score_row": "feat/qualitative-scoring (8)",
     "apply_scoring_kernel": "refactor/scoring-kernel-consolidation (3, landed -- wiring deferred to branch 8)",
     "block_capabilities": "feat/redundancy-blocking-profile (9)",
@@ -57,6 +58,7 @@ IMPLEMENTED_BY = {
 LANDED_BY = {
     "ingest": "fix/ingestion-integrity (2) + feat/disclosure-classifier (6, wiring)",
     "classify_disclosure": "feat/disclosure-classifier (6)",
+    "calibrate_rubrics": "feat/rubric-calibration (7)",
 }
 
 
@@ -68,6 +70,18 @@ def _stage(name: str) -> StageStatus:
 
 def _failure(kind: str, subject_id: str, error: BaseException) -> Dict[str, Any]:
     return {"branch_kind": kind, "subject_id": subject_id, "error": f"{type(error).__name__}: {error}"}
+
+
+def _data_sensitivity(source: Dict[str, Any]) -> DataSensitivity:
+    """Fails closed: an unrecognized or missing flag is treated as real
+    client data, matching graph.initial_state's default (CLAUDE.md
+    section 11) -- a run can only reach Gemini by explicitly declaring
+    itself synthetic, never by a blank or malformed flag. `source` is
+    GraphState for a linear node or a *Task dict for a fanned-out
+    worker; both carry the same "data_sensitivity" key."""
+    if source.get("data_sensitivity") == "synthetic":
+        return DataSensitivity.SYNTHETIC
+    return DataSensitivity.REAL
 
 
 # --- linear deterministic stages -------------------------------------------
@@ -117,9 +131,31 @@ def ingest(state: GraphState) -> Dict[str, Any]:
 
 
 def calibrate_rubrics(state: GraphState) -> Dict[str, Any]:
-    """Single structured LLM call, once per field per engagement
-    (CLAUDE.md section 5), frozen after gate 1 sign-off."""
-    return {"rubrics": dict(state.get("rubrics") or {}), "stage_log": [_stage("calibrate_rubrics")]}
+    """CLAUDE.md section 5/7: single structured LLM call, once per field
+    per engagement, over disclosure-gated applications (section 6) so a
+    withheld/unknown/placeholder value can never become a rubric anchor.
+    Proposed here; frozen to "signed_off" or "rejected" by gate 1
+    (gates.gate_rubric_signoff) before any row is scored.
+
+    A row whose disclosure branch failed (absent from state["disclosure"]
+    entirely) contributes nothing to calibration -- there is no gated
+    value to trust for it, so it is simply skipped rather than falling
+    back to its raw, ungated value."""
+    gated_applications = [
+        entry["gated_application"]
+        for entry in (state.get("disclosure") or {}).values()
+        if "gated_application" in entry
+    ]
+    rubrics = rubric_calibration.calibrate_rubrics(
+        gated_applications, data_sensitivity=_data_sensitivity(state)
+    )
+    return {
+        "rubrics": {
+            "status": "proposed",
+            "fields": {field: field_rubric.as_dict() for field, field_rubric in rubrics.items()},
+        },
+        "stage_log": [_stage("calibrate_rubrics")],
+    }
 
 
 def apply_scoring_kernel(state: GraphState) -> Dict[str, Any]:
@@ -191,16 +227,6 @@ def render_report(state: GraphState) -> Dict[str, Any]:
 # --- fanned-out branch bodies ----------------------------------------------
 # Separated from their worker wrappers so a test can substitute one and
 # assert that the surviving branches still complete.
-
-
-def _data_sensitivity(task: RowTask) -> DataSensitivity:
-    """Fails closed: an unrecognized or missing flag is treated as real
-    client data, matching graph.initial_state's default (CLAUDE.md
-    section 11) -- a run can only reach Gemini by explicitly declaring
-    itself synthetic, never by a blank or malformed flag."""
-    if task.get("data_sensitivity") == "synthetic":
-        return DataSensitivity.SYNTHETIC
-    return DataSensitivity.REAL
 
 
 def _stage_disclosure(task: RowTask) -> Dict[str, Any]:

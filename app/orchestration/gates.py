@@ -79,22 +79,51 @@ def _queue_driven_gate(state: GraphState, gate: str) -> Dict[str, Any]:
     return _record(gate, decision, items)
 
 
+def _is_signoff_approved(decision: Any) -> bool:
+    """Fail closed (CLAUDE.md section 2's spirit, applied to a human
+    decision): only a recognized approval shape counts as signed off.
+    An explicit rejection, or a resume payload this gate simply doesn't
+    recognize, is treated as NOT approved -- never assumed. This does
+    not change what gets recorded in gate_decisions, which is always the
+    decision verbatim; it only decides what `rubrics["status"]` and
+    `rubric_signoff["signed_off"]` become."""
+    if decision == "approved":
+        return True
+    if isinstance(decision, dict):
+        if decision.get("action") in {"approve", "approved"}:
+            return True
+        if decision.get("signed_off") is True:
+            return True
+    return False
+
+
 def gate_rubric_signoff(state: GraphState) -> Dict[str, Any]:
     """Gate 1. Unconditional, once per engagement. Already-signed-off
     rubrics are frozen, so a resumed or re-run engagement does not stop
-    here a second time."""
+    here a second time.
+
+    Approving freezes the proposed rubric to "signed_off" -- the state
+    app.qualitative_scoring (branch 8) must require before trusting it.
+    Rejecting freezes it to "rejected" instead: the proposal stays in
+    state for a reviewer to see what was rejected and why, but nothing
+    downstream may score against it."""
     if (state.get("gate_decisions") or {}).get(GATE_RUBRIC_SIGNOFF):
         return {}
+    proposed = state.get("rubrics") or {}
     decision = interrupt(
         {
             "gate": GATE_RUBRIC_SIGNOFF,
             "reason": GATE_REASONS[GATE_RUBRIC_SIGNOFF],
-            "rubrics": state.get("rubrics") or {},
+            "rubrics": proposed,
         }
     )
+    approved = _is_signoff_approved(decision)
+    frozen_rubrics = dict(proposed)
+    frozen_rubrics["status"] = "signed_off" if approved else "rejected"
     return {
         "gate_decisions": {GATE_RUBRIC_SIGNOFF: {"decision": decision, "item_count": 0}},
-        "rubric_signoff": {"signed_off": True, "decision": decision},
+        "rubric_signoff": {"signed_off": approved, "decision": decision},
+        "rubrics": frozen_rubrics,
     }
 
 

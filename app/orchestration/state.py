@@ -119,7 +119,18 @@ class GraphState(TypedDict, total=False):
     Phase 2 discovery/interview agenda (section 6)."""
 
     rubrics: Dict[str, Dict[str, Any]]
+    """{"status": "proposed" | "signed_off" | "rejected", "fields": {field:
+    app.rubric.calibration.FieldRubric-as-dict}} (section 7). Proposed by
+    app.orchestration.nodes.calibrate_rubrics, one call per field per
+    engagement over disclosure-gated values only; frozen to "signed_off"
+    or "rejected" by gate 1 (gates.gate_rubric_signoff) before any row is
+    scored."""
+
     rubric_signoff: Dict[str, Any]
+    """{"signed_off": bool, "decision": <verbatim resume value>} -- the
+    gate's own record of gate 1's outcome, separate from `rubrics` so a
+    consumer can check sign-off without re-deriving it from rubric status
+    strings."""
 
     qualitative_scores: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
     kernel_results: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
