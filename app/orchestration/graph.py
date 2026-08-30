@@ -1,10 +1,11 @@
 """Top-level orchestration StateGraph -- CLAUDE.md sections 5, 10, 13.
 
-The pipeline's control flow, and only its control flow. Every stage node
-is a pass-through stub (app/orchestration/nodes.py) and the only real
-behavior on this branch is structural: stage order, three ``Send``
-fan-outs, the five ``interrupt()`` gates, and a checkpointer that makes
-a suspended run resumable.
+The pipeline's control flow, and only its control flow: stage order,
+three ``Send`` fan-outs, the five ``interrupt()`` gates, and a
+checkpointer that makes a suspended run resumable. What each stage node
+does is out of scope for this file (app/orchestration/nodes.py); most
+are still pass-through stubs, and ingest/classify_disclosure have been
+real since feat/disclosure-classifier (branch 6).
 
 Building the topology before any stage exists is deliberate. This is a
 portfolio-scale batch pipeline whose stages are individually cheap to

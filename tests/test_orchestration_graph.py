@@ -1,8 +1,8 @@
 """Orchestration graph tests -- topology, resumability, gates, isolation.
 
-The graph is all control flow and no stage behavior on this branch, so
-these tests assert exactly the control-flow properties every later
-branch will rely on and nothing about what a stage returns:
+This suite is about control flow, not what any one stage computes --
+that is what each stage's own test module covers (disclosure
+classification: tests/test_disclosure_classifier.py). Concretely:
 
   * every pipeline stage in CLAUDE.md section 5 is a node, in order
   * a run suspends at a gate and resumes from the checkpointer alone --
@@ -11,7 +11,17 @@ branch will rely on and nothing about what a stage returns:
     than in the process
   * all five gates fire, each only on its own trigger
   * one fanned-out branch failing leaves its siblings' results intact
-  * nothing in the graph reaches an LLM provider on this branch
+  * the node that wires classify_disclosure to the real classifier
+    delegates correctly, without this file ever reaching a live provider
+
+classify_disclosure has made a real LLM call since
+feat/disclosure-classifier (branch 6); every other stage is still a
+pass-through stub. The autouse fixture below replaces the disclosure
+hook with a deterministic fake for this whole file, on purpose: it is
+what keeps a run of this suite hermetic even on a machine that happens
+to have a real GROQ_API_KEY exported in its shell. Tests that care about
+the real wiring override it explicitly, which simply shadows the fixture
+for that one test.
 """
 
 from __future__ import annotations
@@ -33,6 +43,23 @@ from synthetic_fixtures import (
     SYNTHETIC_PROFILES,
     SYNTHETIC_SEGMENTS,
 )
+
+
+_REAL_STAGE_DISCLOSURE = nodes._stage_disclosure
+"""Captured at import time, before the autouse fixture below ever runs,
+so a test that wants the real wiring back can restore it explicitly."""
+
+
+@pytest.fixture(autouse=True)
+def _no_real_disclosure_llm_calls(monkeypatch):
+    def fake_stage_disclosure(task):
+        return {
+            "results": {},
+            "gated_application": dict(task.get("application") or {}),
+            "phase2_agenda": [],
+        }
+
+    monkeypatch.setattr(nodes, "_stage_disclosure", fake_stage_disclosure)
 
 EXPECTED_NODES = {
     "ingest",
@@ -172,7 +199,8 @@ def test_empty_portfolio_still_traverses_every_stage_and_gate():
 
     visited = {entry["stage"] for entry in final["stage_log"]}
     fan_out_stages = {"classify_disclosure", "score_row", "adjudicate_cluster", "research_segment"}
-    assert visited == set(nodes.IMPLEMENTED_BY) - fan_out_stages
+    linear_stages = set(nodes.IMPLEMENTED_BY) | set(nodes.LANDED_BY)
+    assert visited == linear_stages - fan_out_stages
     assert stops == [gates.GATE_RUBRIC_SIGNOFF]
     assert final["report"] == {}
 
@@ -426,15 +454,19 @@ def test_reducers_are_order_independent():
 # --- provider isolation -----------------------------------------------------
 
 
-def test_no_stage_reaches_an_llm_provider_on_this_branch(monkeypatch):
-    """Control flow only: every stage is a stub, so a full run must not
-    touch app.llm.providers. This test is what makes it obvious when a
-    later branch wires a real call in -- it fails loudly rather than
-    letting an unreviewed provider call slip into the skeleton."""
+def test_only_the_disclosure_hook_may_reach_a_provider(monkeypatch):
+    """Every stage except classify_disclosure is still a pass-through
+    stub, and the autouse fixture above replaces classify_disclosure's
+    own hook (_stage_disclosure) with a fake for this file -- so a full
+    run touching app.llm.providers here would mean some OTHER node
+    reached a provider on its own, bypassing its stage hook. That would
+    be a real control-flow bug: nothing but a stage hook should ever be
+    able to make a provider call. (The disclosure classifier's own real
+    routing is verified in tests/test_disclosure_classifier.py.)"""
     from app.llm import providers
 
     def explode(*args, **kwargs):
-        raise AssertionError("orchestration skeleton must not call an LLM provider")
+        raise AssertionError("only a stage's own _stage_* hook may reach an LLM provider")
 
     monkeypatch.setattr(providers, "get_completion", explode)
     monkeypatch.setattr(providers, "GroqProvider", explode)
@@ -444,6 +476,36 @@ def test_no_stage_reaches_an_llm_provider_on_this_branch(monkeypatch):
     final, _ = _run_to_completion(graph, _full_run_state(), run_config("t-no-llm"))
 
     assert final["stage_log"]
+
+
+def test_classify_disclosure_delegates_to_the_real_classifier(monkeypatch):
+    """Verifies the wiring this branch adds -- that the stage hook calls
+    app.disclosure.classifier.classify_row with the row's own data and
+    the run's sensitivity flag -- without exercising the classifier's own
+    LLM-calling internals (that belongs to its own test module). Restores
+    the real _stage_disclosure over this file's blanket autouse fake for
+    this one test, then substitutes classify_row itself so the assertion
+    below never reaches a real provider."""
+    from app.disclosure import classifier as disclosure_classifier
+
+    monkeypatch.setattr(nodes, "_stage_disclosure", _REAL_STAGE_DISCLOSURE)
+
+    calls = []
+
+    def fake_classify_row(application, *, application_id, data_sensitivity):
+        calls.append((application_id, data_sensitivity))
+        return {}
+
+    monkeypatch.setattr(disclosure_classifier, "classify_row", fake_classify_row)
+
+    graph = build_graph(build_in_memory_checkpointer())
+    _run_to_completion(graph, _full_run_state(), run_config("t-real-wiring"))
+
+    from app.llm.providers import DataSensitivity
+
+    assert sorted(calls) == [
+        (app["application_id"], DataSensitivity.SYNTHETIC) for app in SYNTHETIC_APPLICATIONS
+    ]
 
 
 def test_run_input_defaults_to_real_data_sensitivity():

@@ -1,0 +1,47 @@
+# Golden-subset regression gate (CLAUDE.md section 15).
+#
+# This workflow is the required check on every PR from branch 5 onward.
+# "Required" is a repository setting, not something this file can grant:
+# after the first run, mark the `golden-subset` check as required for
+# `main` under Settings -> Branches -> Branch protection rules. Until
+# that is set, the check runs but does not block a merge.
+#
+# Scope is deliberately narrow -- only the golden subset. Lint, the full
+# test suite, and the image build belong to chore/ci-cd-pipeline
+# (branch 18), which extends this workflow rather than replacing it.
+#
+# No provider credentials are configured here, and that is a constraint,
+# not an omission: the golden fixture holds de-identified client rows,
+# and CLAUDE.md section 11 forbids routing client data to a provider
+# without a data-processing agreement. The suite is deterministic and
+# makes no LLM call, so it needs no secrets to pass -- and a change that
+# introduces one fails here rather than in front of the client.
+
+name: golden-subset
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  golden-subset:
+    name: golden subset regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run golden-subset regression suite
+        run: pytest tests/golden_subset -v
