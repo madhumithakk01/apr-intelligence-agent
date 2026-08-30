@@ -49,6 +49,24 @@ MARKET_PRODUCT_BONUS_CAP = 10
 market products, each worth MARKET_PRODUCT_BONUS_PER_PRODUCT points.
 Same carried-over, undocumented-rationale status as COTS_FIT_WEIGHTS."""
 
+# --- Consumed by redundancy/adjudicator.py (branch 10) ---
+
+REDUNDANCY_ENSEMBLE_SIZE = 3
+"""Fixed (CLAUDE.md section 12). Unlike qualitative scoring, redundancy
+adjudication has no single-call-by-default / escalate-on-low-confidence
+path -- every pairwise comparison that survives the deterministic
+Indeterminate-withheld-data pre-check gets the full 3-sample ensemble
+unconditionally (CLAUDE.md section 5's table entry for this stage)."""
+
+REDUNDANCY_ENSEMBLE_TEMPERATURE = 0.7
+"""Not itemized in CLAUDE.md section 12's table; same rationale as
+QUALITATIVE_ENSEMBLE_TEMPERATURE (feat/qualitative-scoring, branch 8) --
+3 samples at temperature 0.0 would trivially agree every time, making
+the ensemble vote meaningless. Kept as its own constant rather than
+reusing branch 8's, since the two ensembles are independently tunable
+and there is no reason their sampling temperatures must move together.
+Not yet validated against the golden subset."""
+
 # --- Consumed by qualitative_scoring/scorer.py (branch 8) ---
 
 QUALITATIVE_ENSEMBLE_SIZE = 3
@@ -94,9 +112,6 @@ validated against the golden subset."""
 # section 12: "No second copy anywhere else in the codebase"). Each
 # MUST be read from here, never re-hardcoded, once its owning branch
 # lands. ---
-
-REDUNDANCY_ENSEMBLE_SIZE = 3
-"""Owned by: feat/redundancy-adjudicator (branch 10)."""
 
 MARKET_AGENT_ITERATION_CAP = 4
 """Owned by: feat/market-intelligence-agent (branch 12). Safety rail,
