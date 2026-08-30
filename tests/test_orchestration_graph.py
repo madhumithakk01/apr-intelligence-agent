@@ -34,6 +34,45 @@ from synthetic_fixtures import (
     SYNTHETIC_SEGMENTS,
 )
 
+_REAL_BLOCK_CAPABILITIES = nodes.block_capabilities
+_REAL_BUILD_PROFILES = nodes.build_profiles
+_REAL_STAGE_ADJUDICATION = nodes._stage_adjudication
+"""Captured at import time, before the autouse fixture below ever runs,
+so a test that wants the real wiring back can restore it explicitly."""
+
+
+def _fake_block_capabilities(state):
+    return {"clusters": list(state.get("clusters") or []), "stage_log": [nodes._stage("block_capabilities")]}
+
+
+def _fake_build_profiles(state):
+    return {"stage_log": [nodes._stage("build_profiles")]}
+
+
+def _fake_stage_adjudication(task):
+    return {}
+
+
+@pytest.fixture(autouse=True)
+def _no_real_llm_calls_in_this_file(monkeypatch):
+    """This file tests orchestration control flow, not what
+    block_capabilities/build_profiles/adjudicate_cluster themselves
+    compute (see tests/test_blocking.py, tests/test_profile_builder.py,
+    tests/test_redundancy_adjudicator.py, and
+    tests/test_recommendation_policy.py). Autouse so no test here can
+    accidentally reach a real provider via the adjudicator -- including
+    on a machine that happens to have a real GROQ_API_KEY exported --
+    and so the rest of this file's tests can keep pre-setting
+    state["clusters"]/state["profiles"] directly (_full_run_state below)
+    without block_capabilities/build_profiles silently recomputing and
+    overwriting them from state["applications"]. A test that cares about
+    the real wiring restores the captured original above, which simply
+    shadows this fixture's patch for that one test."""
+    monkeypatch.setattr(nodes, "block_capabilities", _fake_block_capabilities)
+    monkeypatch.setattr(nodes, "build_profiles", _fake_build_profiles)
+    monkeypatch.setattr(nodes, "_stage_adjudication", _fake_stage_adjudication)
+
+
 EXPECTED_NODES = {
     "ingest",
     "classify_disclosure",
@@ -172,7 +211,8 @@ def test_empty_portfolio_still_traverses_every_stage_and_gate():
 
     visited = {entry["stage"] for entry in final["stage_log"]}
     fan_out_stages = {"classify_disclosure", "score_row", "adjudicate_cluster", "research_segment"}
-    assert visited == set(nodes.IMPLEMENTED_BY) - fan_out_stages
+    linear_stages = set(nodes.IMPLEMENTED_BY) | set(nodes.LANDED_BY)
+    assert visited == linear_stages - fan_out_stages
     assert stops == [gates.GATE_RUBRIC_SIGNOFF]
     assert final["report"] == {}
 
@@ -444,6 +484,138 @@ def test_no_stage_reaches_an_llm_provider_on_this_branch(monkeypatch):
     final, _ = _run_to_completion(graph, _full_run_state(), run_config("t-no-llm"))
 
     assert final["stage_log"]
+
+
+def test_block_capabilities_delegates_to_the_real_module(monkeypatch):
+    """Verifies the wiring this branch adds: block_capabilities calls
+    app.redundancy.blocking.block_by_capability over state["applications"]
+    -- deterministic, so no provider mocking is needed here at all."""
+    from app.redundancy import blocking
+
+    monkeypatch.setattr(nodes, "block_capabilities", _REAL_BLOCK_CAPABILITIES)
+
+    applications = [
+        {"application_id": "SYN-001", "business_capability_l1": "Finance", "business_capability_l2": "R2R"},
+        {"application_id": "SYN-002", "business_capability_l1": "Finance", "business_capability_l2": "R2R"},
+    ]
+    graph = build_graph(build_in_memory_checkpointer())
+    final, _ = _run_to_completion(graph, _full_run_state(applications=applications), run_config("t-block-wiring"))
+
+    assert len(final["clusters"]) == 1
+    assert set(final["clusters"][0]["application_ids"]) == {"SYN-001", "SYN-002"}
+
+
+def test_build_profiles_delegates_to_the_real_module_and_prefers_gated_data(monkeypatch):
+    """Verifies the wiring this branch adds: build_profiles prefers each
+    row's disclosure-gated application over the raw one when a
+    disclosure result exists for it. classify_disclosure runs for real
+    in this test (its output is what build_profiles must prefer), so
+    _stage_disclosure is overridden directly rather than pre-seeding
+    state["disclosure"] -- the real classify_disclosure fan-out would
+    otherwise overwrite a pre-seeded value for the same application on
+    its own first execution."""
+    monkeypatch.setattr(nodes, "build_profiles", _REAL_BUILD_PROFILES)
+    monkeypatch.setattr(
+        nodes, "_stage_disclosure",
+        lambda task: {"gated_application": {"application_id": "SYN-001", "business_criticality": None}},
+    )
+
+    applications = [{"application_id": "SYN-001", "business_criticality": "Strategic"}]
+    graph = build_graph(build_in_memory_checkpointer())
+    final, _ = _run_to_completion(graph, _full_run_state(applications=applications), run_config("t-profiles-wiring"))
+
+    assert final["profiles"]["SYN-001"]["scale_usage"]["business_criticality"] is None
+
+
+def test_stage_adjudication_delegates_to_the_real_adjudicator_and_policy(monkeypatch):
+    """Verifies the wiring this branch adds: _stage_adjudication builds
+    ApplicationProfile objects from the task's serialized profiles,
+    calls the real adjudicator and recommendation_policy, and folds the
+    recommendation into each verdict -- without exercising either
+    module's own LLM-calling internals (their own test modules' job)."""
+    from app.redundancy import adjudicator, profile_builder
+
+    monkeypatch.setattr(nodes, "_stage_adjudication", _REAL_STAGE_ADJUDICATION)
+
+    def fake_adjudicate_cluster(cluster_id, profiles, *, data_sensitivity):
+        assert cluster_id == "CL-CLAIMS"
+        assert {p.application_id for p in profiles} == {"SYN-001", "SYN-002"}
+        return [
+            adjudicator.AdjudicationVerdict(
+                cluster_id=cluster_id, application_id_a="SYN-001", application_id_b="SYN-002",
+                typology=adjudicator.TRUE_DUPLICATE, resolution="unanimous", votes=[],
+                mandatory_review=True, rationale="synthetic wiring test",
+            )
+        ]
+
+    monkeypatch.setattr(adjudicator, "adjudicate_cluster", fake_adjudicate_cluster)
+
+    # SYNTHETIC_PROFILES (the default from _full_run_state) is a
+    # placeholder shape, not real ApplicationProfile.as_dict() output --
+    # supply properly-shaped profiles for CL-CLAIMS's members so
+    # ApplicationProfile.from_dict can actually deserialize them.
+    real_profiles = {
+        application_id: profile_builder.build_profile({"application_id": application_id}).as_dict()
+        for application_id in ("SYN-001", "SYN-002", "SYN-003")
+    }
+    graph = build_graph(build_in_memory_checkpointer())
+    final, stops = _run_to_completion(
+        graph, _full_run_state(profiles=real_profiles), run_config("t-adjudication-wiring")
+    )
+
+    assert gates.GATE_REDUNDANCY_VERDICT in stops
+    verdict = final["verdicts"][0]
+    assert verdict["typology"] == adjudicator.TRUE_DUPLICATE
+    assert verdict["recommendation"]["recommendation"]  # non-empty -- recommendation_policy actually ran
+    assert verdict["recommendation"]["mandatory_review"] is True
+
+
+def test_gate_3_fires_on_the_recommendations_own_review_flag_not_only_the_verdicts(monkeypatch):
+    """The specific property _stage_adjudication exists to make possible
+    (see its docstring): a Scale-Tiered Overlap verdict the ensemble
+    itself did not flag (mandatory_review=False) must still reach gate 3
+    once recommendation_policy resolves it to a consolidation
+    recommendation -- proving gate 3 is wired off the *combined* decision,
+    not off the ensemble's confidence alone."""
+    from app.redundancy import adjudicator, profile_builder
+
+    monkeypatch.setattr(nodes, "_stage_adjudication", _REAL_STAGE_ADJUDICATION)
+
+    def fake_adjudicate_cluster(cluster_id, profiles, *, data_sensitivity):
+        return [
+            adjudicator.AdjudicationVerdict(
+                cluster_id=cluster_id, application_id_a="SYN-001", application_id_b="SYN-002",
+                typology=adjudicator.SCALE_TIERED_OVERLAP, resolution="unanimous", votes=[],
+                mandatory_review=False,  # the ensemble itself saw no reason to flag this
+                rationale="synthetic wiring test",
+            )
+        ]
+
+    monkeypatch.setattr(adjudicator, "adjudicate_cluster", fake_adjudicate_cluster)
+
+    # A heavier, cheaper-per-FTE platform and a lighter, pricier-per-FTE
+    # candidate, both matching on every gate -- nothing blocks
+    # consolidation, so recommendation_policy resolves to "migrate."
+    heavy = profile_builder.build_profile({
+        "application_id": "SYN-001", "fte_count": 50, "business_criticality": "low",
+        "application_stability": "very high", "application_security_level": "Confidential",
+        "annual_fte_cost": 500_000,
+    }).as_dict()
+    light = profile_builder.build_profile({
+        "application_id": "SYN-002", "fte_count": 2, "business_criticality": "low",
+        "application_security_level": "Confidential", "annual_fte_cost": 100_000,
+    }).as_dict()
+
+    graph = build_graph(build_in_memory_checkpointer())
+    final, stops = _run_to_completion(
+        graph, _full_run_state(profiles={"SYN-001": heavy, "SYN-002": light, "SYN-003": light}),
+        run_config("t-gate3-combined-flag"),
+    )
+
+    assert gates.GATE_REDUNDANCY_VERDICT in stops
+    verdict = final["verdicts"][0]
+    assert "Migrate" in verdict["recommendation"]["recommendation"]
+    assert verdict["recommendation"]["mandatory_review"] is True
 
 
 def test_run_input_defaults_to_real_data_sensitivity():
