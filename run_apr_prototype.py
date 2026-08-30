@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from app.services.analysis_service import AnalysisService
-from app.services.excel_loader import ExcelLoader
+from app.ingestion.excel_loader import ExcelLoader
 from app.services.report_service import ReportService
 
 

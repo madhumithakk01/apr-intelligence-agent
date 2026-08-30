@@ -71,6 +71,8 @@ class Application(Base):
 
     business_capability_l3 = Column(String)
 
+    numeric_field_notes = Column(Text)
+
 
 class MarketProduct(Base):
 

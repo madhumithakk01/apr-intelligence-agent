@@ -28,17 +28,22 @@ Base = declarative_base()
 
 def migrate_schema() -> None:
     inspector = inspect(engine)
-    if "market_products" not in inspector.get_table_names():
-        return
-
-    columns = {column["name"] for column in inspector.get_columns("market_products")}
+    existing_tables = set(inspector.get_table_names())
     statements = []
-    if "domain_key" not in columns:
-        statements.append("ALTER TABLE market_products ADD COLUMN domain_key VARCHAR")
-    if "vendor" not in columns:
-        statements.append("ALTER TABLE market_products ADD COLUMN vendor VARCHAR")
-    if "structured_json" not in columns:
-        statements.append("ALTER TABLE market_products ADD COLUMN structured_json TEXT")
+
+    if "market_products" in existing_tables:
+        columns = {column["name"] for column in inspector.get_columns("market_products")}
+        if "domain_key" not in columns:
+            statements.append("ALTER TABLE market_products ADD COLUMN domain_key VARCHAR")
+        if "vendor" not in columns:
+            statements.append("ALTER TABLE market_products ADD COLUMN vendor VARCHAR")
+        if "structured_json" not in columns:
+            statements.append("ALTER TABLE market_products ADD COLUMN structured_json TEXT")
+
+    if "applications" in existing_tables:
+        columns = {column["name"] for column in inspector.get_columns("applications")}
+        if "numeric_field_notes" not in columns:
+            statements.append("ALTER TABLE applications ADD COLUMN numeric_field_notes TEXT")
 
     if not statements:
         return
