@@ -331,3 +331,39 @@ def calibrate_rubrics(
         field: propose_field_rubric(field, gated_applications, data_sensitivity=data_sensitivity)
         for field in RUBRIC_FIELDS
     }
+
+
+# --- reading the GraphState-serialized shape --------------------------------
+# app.orchestration.state stores rubrics as the plain-dict shape
+# {"status": ..., "fields": {field: FieldRubric.as_dict()}} (FieldRubric.as_dict
+# above), not as FieldRubric instances -- these two functions are how a
+# consumer (qualitative_scoring/scorer.py, branch 8) reads that shape
+# without round-tripping it back through the dataclasses.
+
+
+def is_rubric_usable(rubrics: Optional[Dict[str, Any]]) -> bool:
+    """"Frozen for the engagement" (section 7) means exactly this: a
+    rubric may only be trusted once gate 1 has signed it off. A proposed
+    or rejected rubric -- or no rubric at all -- is not usable, which a
+    caller should treat identically to having no anchor for any value."""
+    return bool(rubrics) and rubrics.get("status") == "signed_off"
+
+
+def lookup_serialized_anchor(
+    rubrics: Optional[Dict[str, Any]], field: str, raw_value: Optional[Any]
+) -> Optional[Dict[str, Any]]:
+    """RubricAnchor.as_dict() for `field`/`raw_value` if a signed-off
+    rubric has one, else None -- None both when the rubric isn't usable
+    at all and when it simply has no anchor for this value, since a
+    caller only ever needs to know whether it can trust one."""
+    if not is_rubric_usable(rubrics):
+        return None
+    if raw_value is None:
+        return None
+    text = str(raw_value).strip()
+    if not text:
+        return None
+    field_entry = (rubrics.get("fields") or {}).get(field)
+    if not field_entry:
+        return None
+    return (field_entry.get("anchors") or {}).get(_normalize(text))
