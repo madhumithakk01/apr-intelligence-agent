@@ -5,30 +5,35 @@ future branch replaces each one, and each stub is honest about it rather
 than returning a plausible-looking fake result -- a stub that invented
 an output would let a later branch's tests pass for the wrong reason).
 ``ingest`` and ``classify_disclosure`` have been real since
-feat/disclosure-classifier (branch 6); ``calibrate_rubrics`` joins them
-as of feat/rubric-calibration (branch 7). LANDED_BY records that
-transition the same way IMPLEMENTED_BY records a pending one, so the
-stage log always says which is which.
+feat/disclosure-classifier (branch 6); ``calibrate_rubrics`` joined them
+in feat/rubric-calibration (branch 7); ``score_row`` and
+``apply_scoring_kernel`` join them now, in feat/qualitative-scoring
+(branch 8) -- the latter's landed kernel (branch 3) finally has
+calibrated qualitative labels to consume instead of a stub's empty
+output. LANDED_BY records that transition the same way IMPLEMENTED_BY
+records a pending one, so the stage log always says which is which.
 
 Fan-out workers (``classify_disclosure``, ``score_row``,
 ``adjudicate_cluster``, ``research_segment``) never raise past their own
 branch: a failure is recorded in ``branch_failures`` for that subject and
 the remaining branches finish normally (CLAUDE.md section 8). Each
 delegates its body to a ``_stage_*`` function purely so that isolation
-is testable by substituting one. ``calibrate_rubrics`` is a linear node,
-not fanned out, and has no such split -- there is exactly one call site
-(app.rubric.calibration.calibrate_rubrics) for a test to substitute.
+is testable by substituting one. ``calibrate_rubrics`` and
+``apply_scoring_kernel`` are linear nodes, not fanned out, and have no
+such split -- each has exactly one call site (a module-level function
+elsewhere) for a test to substitute.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from app.disclosure import classifier as disclosure_classifier
 from app.ingestion.excel_loader import ExcelLoader
 from app.ingestion.row_mapping import build_application_fields
 from app.llm.providers import DataSensitivity
+from app.orchestration import gates
 from app.orchestration.state import (
     ClusterTask,
     GraphState,
@@ -36,13 +41,13 @@ from app.orchestration.state import (
     SegmentTask,
     StageStatus,
 )
+from app.qualitative_scoring import scorer as qualitative_scorer
 from app.rubric import calibration as rubric_calibration
+from app.scoring import kernel
 
 logger = logging.getLogger(__name__)
 
 IMPLEMENTED_BY = {
-    "score_row": "feat/qualitative-scoring (8)",
-    "apply_scoring_kernel": "refactor/scoring-kernel-consolidation (3, landed -- wiring deferred to branch 8)",
     "block_capabilities": "feat/redundancy-blocking-profile (9)",
     "build_profiles": "feat/redundancy-blocking-profile (9)",
     "adjudicate_cluster": "feat/redundancy-adjudicator (10)",
@@ -59,6 +64,8 @@ LANDED_BY = {
     "ingest": "fix/ingestion-integrity (2) + feat/disclosure-classifier (6, wiring)",
     "classify_disclosure": "feat/disclosure-classifier (6)",
     "calibrate_rubrics": "feat/rubric-calibration (7)",
+    "score_row": "feat/qualitative-scoring (8)",
+    "apply_scoring_kernel": "refactor/scoring-kernel-consolidation (3) + feat/qualitative-scoring (8, wiring)",
 }
 
 
@@ -158,12 +165,74 @@ def calibrate_rubrics(state: GraphState) -> Dict[str, Any]:
     }
 
 
+def _qualitative_label(field_scores: Dict[str, Any], field: str) -> Optional[str]:
+    entry = field_scores.get(field)
+    return entry.get("label") if entry else None
+
+
 def apply_scoring_kernel(state: GraphState) -> Dict[str, Any]:
-    """Deterministic TIM-E / COTS-fit scoring. app/scoring/kernel.py is
-    the landed implementation, but it consumes calibrated qualitative
-    scores that do not exist until branch 8 -- so its call site lands
-    there rather than feeding the kernel this branch's stub output."""
-    return {"stage_log": [_stage("apply_scoring_kernel")]}
+    """Deterministic TIM-E / COTS-fit scoring (CLAUDE.md section 5).
+    app/scoring/kernel.py is the landed implementation (branch 3); this
+    is where it is actually called, now that calibrated qualitative
+    labels exist to feed it (branch 8). Every qualitative axis comes
+    from the scorer's resolved label -- never the row's raw free text --
+    so kernel.score_qualitative_label always sees either a label it
+    recognizes or None (withheld, or scoring genuinely failed), never a
+    value branch 8's own scoring already judged unscorable. Cost fields
+    and the security classification come from the disclosure-gated
+    application, same as the qualitative scorer's own input, so a
+    withheld cost is None here exactly as it is everywhere else."""
+    disclosure = state.get("disclosure") or {}
+    qualitative_scores = state.get("qualitative_scores") or {}
+    results: Dict[str, Any] = {}
+
+    for application in state.get("applications") or []:
+        application_id = application.get("application_id")
+        if not application_id:
+            continue
+        gated = (disclosure.get(application_id) or {}).get("gated_application") or application
+        field_scores = qualitative_scores.get(application_id) or {}
+
+        inputs = kernel.ScoringInput(
+            application_id=application_id,
+            application_name=gated.get("application_name") or "",
+            business_capability_l2=gated.get("business_capability_l2") or "",
+            business_capability_l3=gated.get("business_capability_l3") or "",
+            business_criticality=_qualitative_label(field_scores, "business_criticality"),
+            strategic_relevance=_qualitative_label(field_scores, "strategic_relevance"),
+            business_fitness=_qualitative_label(field_scores, "business_fitness"),
+            usage_adoption=_qualitative_label(field_scores, "usage_adoption"),
+            application_stability=_qualitative_label(field_scores, "application_stability"),
+            maintainability=_qualitative_label(field_scores, "maintainability"),
+            availability=_qualitative_label(field_scores, "availability"),
+            reliability=_qualitative_label(field_scores, "reliability"),
+            scalability=_qualitative_label(field_scores, "scalability"),
+            application_security_level=gated.get("application_security_level"),
+            skill_availability=_qualitative_label(field_scores, "skill_availability"),
+            functional_redundancy=_qualitative_label(field_scores, "functional_redundancy"),
+            annual_fte_cost=gated.get("annual_fte_cost"),
+            annual_license_cost=gated.get("annual_license_cost"),
+            annual_infrastructure_cost=gated.get("annual_infrastructure_cost"),
+            other_costs=gated.get("other_costs"),
+            # market_product_count: no retrieval exists before branch 12;
+            # 0 is the same "no market evidence yet" default the batch
+            # path used before this kernel existed (CLAUDE.md section 8).
+            market_product_count=0,
+        )
+        scoring_result = kernel.score_application(inputs)
+        results[application_id] = {
+            "tim_e_score": scoring_result.tim_e.score,
+            "tim_e_decision": scoring_result.tim_e.decision,
+            "tim_e_raw_decision": scoring_result.tim_e.raw_decision,
+            "floor_applied": scoring_result.tim_e.floor_applied,
+            "security_classification": scoring_result.tim_e.security_classification,
+            "cots_score": scoring_result.cots.score,
+            "cots_recommendation": scoring_result.cots.recommendation,
+            "cots_meets_threshold": scoring_result.cots.meets_threshold,
+            "modernization_recommendation": scoring_result.modernization_recommendation,
+        }
+
+    return {"kernel_results": results, "stage_log": [_stage("apply_scoring_kernel")]}
 
 
 def block_capabilities(state: GraphState) -> Dict[str, Any]:
@@ -248,7 +317,18 @@ def _stage_disclosure(task: RowTask) -> Dict[str, Any]:
 
 
 def _stage_qualitative(task: RowTask) -> Dict[str, Any]:
-    return {}
+    """CLAUDE.md section 7. `task["application"]` is already the
+    disclosure-gated dict (graph._fan_out_qualitative), never the raw
+    one -- app.qualitative_scoring.scorer never sees a withheld value."""
+    application = task.get("application") or {}
+    application_id = _row_id(task)
+    results = qualitative_scorer.score_row(
+        application,
+        task.get("rubrics"),
+        application_id=application_id,
+        data_sensitivity=_data_sensitivity(task),
+    )
+    return {field: result.as_dict() for field, result in results.items()}
 
 
 def _stage_adjudication(task: ClusterTask) -> Dict[str, Any]:
@@ -286,8 +366,10 @@ def classify_disclosure(task: RowTask) -> Dict[str, Any]:
 
 def score_row(task: RowTask) -> Dict[str, Any]:
     """One fanned-out branch per application row. Single call by default,
-    escalating to a 3-sample ensemble on low confidence (section 7); an
-    ensemble range of >= 2 enqueues a gate 2 review item."""
+    escalating to a 3-sample ensemble on low confidence or rubric
+    disagreement (section 7). Any field whose ensemble result carries
+    `needs_review` (range >= 2 points) enqueues its own gate 2 review
+    item -- one row can enqueue several, one per ambiguous field."""
     subject = _row_id(task)
     try:
         result = _stage_qualitative(task)
@@ -300,9 +382,18 @@ def score_row(task: RowTask) -> Dict[str, Any]:
         "qualitative_scores": {subject: result},
         "stage_log": [_stage("score_row")],
     }
-    review = result.get("review_items")
-    if review:
-        update["review_queue"] = list(review)
+    review_items = [
+        {
+            "gate": gates.GATE_QUALITATIVE_DISAGREEMENT,
+            "subject_id": subject,
+            "reason": f"{field}: {field_result.get('rationale', '')}",
+            "payload": {"field": field, "field_result": field_result},
+        }
+        for field, field_result in result.items()
+        if field_result.get("needs_review")
+    ]
+    if review_items:
+        update["review_queue"] = review_items
     return update
 
 
