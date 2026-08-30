@@ -12,3 +12,4 @@ CLAUDE.MD
 system_design.md
 *.xlsx
 *.xls
+tests/golden_subset/local/
