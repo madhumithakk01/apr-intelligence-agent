@@ -1,0 +1,1055 @@
+{
+  "fixture": "golden_subset",
+  "note": "Invented rows. No value, cost, or capability name is taken or derived from the client workbook -- see README.md. Exercises the scoring paths; does not validate the CLAUDE.md section 12 parameters, which needs real data and stays local.",
+  "snapshot_note": "kernel_snapshot is generated, not judged -- it records what app/scoring/kernel.py currently produces for each row, so an unintended scoring change fails a PR. analyst_labels are human judgments; they are filled by an internal reviewer, never generated.",
+  "rows": {
+    "GOLD-01": {
+      "kernel_snapshot": {
+        "tim_e_score": 96.0,
+        "tim_e_decision": "Invest",
+        "tim_e_raw_decision": "Invest",
+        "floor_applied": null,
+        "security_classification": "Confidential",
+        "value_score": {
+          "value": 5.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 5.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 2.0,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-02": {
+      "kernel_snapshot": {
+        "tim_e_score": 67.0,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Migrate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 4.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 3.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 3.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-03": {
+      "kernel_snapshot": {
+        "tim_e_score": 49.8,
+        "tim_e_decision": "Tolerate",
+        "tim_e_raw_decision": "Tolerate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 3.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 2.4,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 4.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-04": {
+      "kernel_snapshot": {
+        "tim_e_score": 28.4,
+        "tim_e_decision": "Eliminate",
+        "tim_e_raw_decision": "Eliminate",
+        "floor_applied": null,
+        "security_classification": "Public",
+        "value_score": {
+          "value": 1.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 2.2,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 5.0,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retire over a phased transition plan."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-05": {
+      "kernel_snapshot": {
+        "tim_e_score": 88.2,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Invest",
+        "floor_applied": "skill_availability_floor",
+        "security_classification": "Confidential",
+        "value_score": {
+          "value": 5.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 3.6,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 1.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-06": {
+      "kernel_snapshot": {
+        "tim_e_score": 50.5,
+        "tim_e_decision": "Tolerate",
+        "tim_e_raw_decision": "Tolerate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 2.5,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 2.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 2.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": 100,
+        "cots_recommendation": "Replace with COTS",
+        "cots_meets_threshold": true,
+        "modernization_recommendation": "Evaluate the leading retrieved COTS candidate via fit-gap workshop, POC, and phased data migration."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-07": {
+      "kernel_snapshot": {
+        "tim_e_score": 72.0,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Migrate",
+        "floor_applied": null,
+        "security_classification": "Confidential",
+        "value_score": {
+          "value": 4.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 4.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 4.0,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": 33.0,
+        "cots_recommendation": "Retain/Enhance Existing Application",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Migrate to cloud-native architecture with minimal downtime."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-08": {
+      "kernel_snapshot": {
+        "tim_e_score": 69.5,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Migrate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 3.5,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 4.0,
+          "status": "partial",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "scalability"
+          ],
+          "unscored_axes": [
+            "availability",
+            "reliability"
+          ]
+        },
+        "consolidation_need": {
+          "value": 3.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-09": {
+      "kernel_snapshot": {
+        "tim_e_score": null,
+        "tim_e_decision": "Insufficient Data",
+        "tim_e_raw_decision": null,
+        "floor_applied": null,
+        "security_classification": "Restricted",
+        "value_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ]
+        },
+        "health_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ]
+        },
+        "consolidation_need": {
+          "value": 3.0,
+          "status": "partial",
+          "scored_axes": [
+            "cost_bucket"
+          ],
+          "unscored_axes": [
+            "functional_redundancy"
+          ]
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Insufficient qualitative data to recommend a modernization path — see unscored axes."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-10": {
+      "kernel_snapshot": {
+        "tim_e_score": null,
+        "tim_e_decision": "Insufficient Data",
+        "tim_e_raw_decision": null,
+        "floor_applied": null,
+        "security_classification": "Public",
+        "value_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ]
+        },
+        "health_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ]
+        },
+        "consolidation_need": {
+          "value": 2.0,
+          "status": "partial",
+          "scored_axes": [
+            "cost_bucket"
+          ],
+          "unscored_axes": [
+            "functional_redundancy"
+          ]
+        },
+        "cots_score": null,
+        "cots_recommendation": "Insufficient qualitative data for COTS-fit scoring",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Insufficient qualitative data to recommend a modernization path — see unscored axes."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-11": {
+      "kernel_snapshot": {
+        "tim_e_score": null,
+        "tim_e_decision": "Insufficient Data",
+        "tim_e_raw_decision": null,
+        "floor_applied": null,
+        "security_classification": "Confidential",
+        "value_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ]
+        },
+        "health_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ]
+        },
+        "consolidation_need": {
+          "value": 4.0,
+          "status": "partial",
+          "scored_axes": [
+            "cost_bucket"
+          ],
+          "unscored_axes": [
+            "functional_redundancy"
+          ]
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Insufficient qualitative data to recommend a modernization path — see unscored axes."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-12": {
+      "kernel_snapshot": {
+        "tim_e_score": null,
+        "tim_e_decision": "Insufficient Data",
+        "tim_e_raw_decision": null,
+        "floor_applied": null,
+        "security_classification": "Confidential",
+        "value_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ]
+        },
+        "health_score": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ]
+        },
+        "consolidation_need": {
+          "value": 2.0,
+          "status": "partial",
+          "scored_axes": [
+            "cost_bucket"
+          ],
+          "unscored_axes": [
+            "functional_redundancy"
+          ]
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Insufficient qualitative data to recommend a modernization path — see unscored axes."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-13": {
+      "kernel_snapshot": {
+        "tim_e_score": 77.2,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Migrate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 4.0,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 3.6,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 2.0,
+          "status": "partial",
+          "scored_axes": [
+            "functional_redundancy"
+          ],
+          "unscored_axes": [
+            "cost_bucket"
+          ]
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-14": {
+      "kernel_snapshot": {
+        "tim_e_score": null,
+        "tim_e_decision": "Insufficient Data",
+        "tim_e_raw_decision": null,
+        "floor_applied": null,
+        "security_classification": "Confidential",
+        "value_score": {
+          "value": 4.25,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 4.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": null,
+          "status": "insufficient_data",
+          "scored_axes": [],
+          "unscored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ]
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Insufficient qualitative data to recommend a modernization path — see unscored axes."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-15": {
+      "kernel_snapshot": {
+        "tim_e_score": 67.1,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Migrate",
+        "floor_applied": null,
+        "security_classification": "Restricted",
+        "value_score": {
+          "value": 3.5,
+          "status": "partial",
+          "scored_axes": [
+            "business_criticality",
+            "business_fitness"
+          ],
+          "unscored_axes": [
+            "strategic_relevance",
+            "usage_adoption"
+          ]
+        },
+        "health_score": {
+          "value": 2.8,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 2.0,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-16": {
+      "kernel_snapshot": {
+        "tim_e_score": 58.0,
+        "tim_e_decision": "Tolerate",
+        "tim_e_raw_decision": "Tolerate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 3.0,
+          "status": "partial",
+          "scored_axes": [
+            "business_criticality",
+            "business_fitness"
+          ],
+          "unscored_axes": [
+            "strategic_relevance",
+            "usage_adoption"
+          ]
+        },
+        "health_score": {
+          "value": 3.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 3.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-17": {
+      "kernel_snapshot": {
+        "tim_e_score": 70.85,
+        "tim_e_decision": "Migrate",
+        "tim_e_raw_decision": "Migrate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 4.25,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 3.8,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 4.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-18": {
+      "kernel_snapshot": {
+        "tim_e_score": 56.65,
+        "tim_e_decision": "Tolerate",
+        "tim_e_raw_decision": "Tolerate",
+        "floor_applied": null,
+        "security_classification": "Internal",
+        "value_score": {
+          "value": 2.25,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 3.2,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 2.5,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-19": {
+      "kernel_snapshot": {
+        "tim_e_score": 84.75,
+        "tim_e_decision": "Invest",
+        "tim_e_raw_decision": "Invest",
+        "floor_applied": null,
+        "security_classification": "Restricted",
+        "value_score": {
+          "value": 3.75,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 5.0,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 2.0,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": 66.0,
+        "cots_recommendation": "Replace with COTS",
+        "cots_meets_threshold": true,
+        "modernization_recommendation": "Evaluate the leading retrieved COTS candidate via fit-gap workshop, POC, and phased data migration."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    },
+    "GOLD-20": {
+      "kernel_snapshot": {
+        "tim_e_score": 40.35,
+        "tim_e_decision": "Tolerate",
+        "tim_e_raw_decision": "Tolerate",
+        "floor_applied": null,
+        "security_classification": "Public",
+        "value_score": {
+          "value": 1.75,
+          "status": "complete",
+          "scored_axes": [
+            "business_criticality",
+            "strategic_relevance",
+            "business_fitness",
+            "usage_adoption"
+          ],
+          "unscored_axes": []
+        },
+        "health_score": {
+          "value": 1.8,
+          "status": "complete",
+          "scored_axes": [
+            "application_stability",
+            "maintainability",
+            "availability",
+            "reliability",
+            "scalability"
+          ],
+          "unscored_axes": []
+        },
+        "consolidation_need": {
+          "value": 3.0,
+          "status": "complete",
+          "scored_axes": [
+            "functional_redundancy",
+            "cost_bucket"
+          ],
+          "unscored_axes": []
+        },
+        "cots_score": null,
+        "cots_recommendation": "Retain existing application — insufficient retrieved market data for COTS comparison",
+        "cots_meets_threshold": false,
+        "modernization_recommendation": "Retain and monitor; complete targeted COTS research before a replacement decision."
+      },
+      "analyst_labels": {
+        "expected_time_decision": null,
+        "expected_redundancy_typology": null,
+        "expected_cots_action": null,
+        "reviewer": null,
+        "notes": null
+      }
+    }
+  }
+}
