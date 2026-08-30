@@ -12,13 +12,15 @@ in feat/rubric-calibration (branch 7); ``score_row`` and
 8) -- the latter's landed kernel (branch 3) finally had calibrated
 qualitative labels to consume instead of a stub's empty output.
 ``block_capabilities``, ``build_profiles``, ``adjudicate_cluster``, and
-``apply_recommendation_policy`` join them now, in
-feat/redundancy-adjudicator (branch 10) -- the first two were orphaned by
-feat/redundancy-blocking-profile (branch 9), which built the modules
-they call but, based strictly on refactor/scoring-kernel-consolidation
-(branch 3), never had this graph in its own ancestry to wire them into.
-LANDED_BY records each transition to real the same way IMPLEMENTED_BY
-records a pending one, so the stage log always says which is which.
+``apply_recommendation_policy`` joined them in feat/redundancy-adjudicator
+(branch 10) -- the first two were orphaned by feat/redundancy-blocking-
+profile (branch 9), which built the modules they call but, based
+strictly on refactor/scoring-kernel-consolidation (branch 3), never had
+this graph in its own ancestry to wire them into. ``detect_cost_outliers``
+and ``explain_cost_outliers`` join them now, in
+feat/cost-outlier-detection (branch 11). LANDED_BY records each
+transition to real the same way IMPLEMENTED_BY records a pending one, so
+the stage log always says which is which.
 
 Fan-out workers (``classify_disclosure``, ``score_row``,
 ``adjudicate_cluster``, ``research_segment``) never raise past their own
@@ -26,9 +28,10 @@ branch: a failure is recorded in ``branch_failures`` for that subject and
 the remaining branches finish normally (CLAUDE.md section 8). Each
 delegates its body to a ``_stage_*`` function purely so that isolation
 is testable by substituting one. ``calibrate_rubrics``, ``apply_scoring_
-kernel``, ``block_capabilities``, and ``build_profiles`` are linear
-nodes, not fanned out, and have no such split -- each has exactly one
-call site (a module-level function elsewhere) for a test to substitute.
+kernel``, ``block_capabilities``, ``build_profiles``,
+``detect_cost_outliers``, and ``explain_cost_outliers`` are linear nodes,
+not fanned out, and have no such split -- each has exactly one call site
+(a module-level function elsewhere) for a test to substitute.
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
+from app.cost_intelligence import explainability, outlier_detection
 from app.disclosure import classifier as disclosure_classifier
 from app.ingestion.excel_loader import ExcelLoader
 from app.ingestion.row_mapping import build_application_fields
@@ -58,8 +62,6 @@ from app.scoring import kernel
 logger = logging.getLogger(__name__)
 
 IMPLEMENTED_BY = {
-    "detect_cost_outliers": "feat/cost-outlier-detection (11)",
-    "explain_cost_outliers": "feat/cost-outlier-detection (11)",
     "research_segment": "feat/market-intelligence-agent (12)",
     "extract_and_ground_products": "feat/product-extraction-grounding (13)",
     "generate_narratives": "feat/narrative-generation (14)",
@@ -76,6 +78,8 @@ LANDED_BY = {
     "build_profiles": "feat/redundancy-blocking-profile (9) + feat/redundancy-adjudicator (10, wiring)",
     "adjudicate_cluster": "feat/redundancy-adjudicator (10)",
     "apply_recommendation_policy": "feat/redundancy-adjudicator (10)",
+    "detect_cost_outliers": "feat/cost-outlier-detection (11)",
+    "explain_cost_outliers": "feat/cost-outlier-detection (11)",
 }
 
 
@@ -301,18 +305,69 @@ def apply_recommendation_policy(state: GraphState) -> Dict[str, Any]:
 
 
 def detect_cost_outliers(state: GraphState) -> Dict[str, Any]:
-    """Deterministic statistics decide the flag; the minimum peer cluster
-    size floor lives in governance_params (section 12)."""
+    """Deterministic statistics decide the flag
+    (app.cost_intelligence.outlier_detection, branch 11); the minimum
+    peer cluster size floor lives in governance_params (section 12).
+    Reuses the same capability clusters and normalized cost-per-FTE
+    profiles redundancy blocking/profiling already built this run --
+    'peer cluster' here is the same concept, not a second one."""
+    clusters = state.get("clusters") or []
+    profiles = {
+        application_id: profile_builder_module.ApplicationProfile.from_dict(data)
+        for application_id, data in (state.get("profiles") or {}).items()
+    }
+    flags = outlier_detection.detect_cost_outliers(clusters, profiles)
     return {
-        "cost_outliers": list(state.get("cost_outliers") or []),
+        "cost_outliers": [flag.as_dict() for flag in flags],
         "stage_log": [_stage("detect_cost_outliers")],
     }
 
 
 def explain_cost_outliers(state: GraphState) -> Dict[str, Any]:
-    """Single LLM call judging only whether an already-flagged outlier is
-    explainable -- it never decides the flag itself."""
-    return {"stage_log": [_stage("explain_cost_outliers")]}
+    """Single LLM call per flagged outlier
+    (app.cost_intelligence.explainability, branch 11), judging only
+    whether the flag is explainable -- it never decides the flag itself.
+    Linear, not fanned out (CLAUDE.md section 5's table entry for this
+    stage is a single explain call, not an ensemble; the graph's own
+    topology never Sends this stage), so a portfolio with several flagged
+    outliers makes its calls here sequentially, one node execution.
+    Any flag whose explainability comes back needing review
+    (governance_params.COST_OUTLIER_EXPLAINABILITY_CONFIDENCE_THRESHOLD)
+    enqueues its own gate 4 item."""
+    profiles = {
+        application_id: profile_builder_module.ApplicationProfile.from_dict(data)
+        for application_id, data in (state.get("profiles") or {}).items()
+    }
+    flags = [
+        outlier_detection.CostOutlierFlag(
+            application_id=entry["application_id"],
+            cluster_id=entry["cluster_id"],
+            cost_per_fte=entry["cost_per_fte"],
+            direction=entry["direction"],
+            cluster_stats=outlier_detection.ClusterCostStats(**entry["cluster_stats"]),
+        )
+        for entry in (state.get("cost_outliers") or [])
+    ]
+    explained = explainability.explain_outliers(
+        flags, profiles, data_sensitivity=_data_sensitivity(state)
+    )
+
+    review_items = [
+        {
+            "gate": gates.GATE_COST_OUTLIER,
+            "subject_id": entry["application_id"],
+            "reason": f"{entry['direction']} cost-per-FTE outlier in {entry['cluster_id']}: "
+                      f"{entry['explainability']['rationale']}",
+            "payload": entry,
+        }
+        for entry in explained
+        if entry["explainability"]["needs_review"]
+    ]
+
+    update: Dict[str, Any] = {"cost_outliers": explained, "stage_log": [_stage("explain_cost_outliers")]}
+    if review_items:
+        update["review_queue"] = review_items
+    return update
 
 
 def extract_and_ground_products(state: GraphState) -> Dict[str, Any]:
