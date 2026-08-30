@@ -62,6 +62,7 @@ class ReportService:
             f"- Migrate: **{decision_counts.get('Migrate', 0)}**",
             f"- Tolerate: **{decision_counts.get('Tolerate', 0)}**",
             f"- Eliminate: **{decision_counts.get('Eliminate', 0)}**",
+            f"- Insufficient Data: **{decision_counts.get('Insufficient Data', 0)}**",
             "",
             "## Top 10 by TIM-E Score",
             "",

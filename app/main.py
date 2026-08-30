@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -86,11 +87,11 @@ def analyze_application(
     reliability: str = Form(...),
     scalability: str = Form(...),
     technology_stack: str = Form(...),
-    annual_fte_cost: float = Form(...),
-    annual_license_cost: float = Form(...),
-    fte_count: int = Form(...),
-    annual_infrastructure_cost: float = Form(...),
-    other_costs: float = Form(...),
+    annual_fte_cost: Optional[float] = Form(default=None),
+    annual_license_cost: Optional[float] = Form(default=None),
+    fte_count: Optional[int] = Form(default=None),
+    annual_infrastructure_cost: Optional[float] = Form(default=None),
+    other_costs: Optional[float] = Form(default=None),
     business_capability_l1: str = Form(...),
     business_capability_l2: str = Form(...),
     business_capability_l3: str = Form(...),

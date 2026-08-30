@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -22,11 +24,11 @@ class ApplicationInput(BaseModel):
     reliability: str
     scalability: str
     technology_stack: str
-    annual_fte_cost: float
-    annual_license_cost: float
-    fte_count: int
-    annual_infrastructure_cost: float
-    other_costs: float
+    annual_fte_cost: Optional[float] = None
+    annual_license_cost: Optional[float] = None
+    fte_count: Optional[int] = None
+    annual_infrastructure_cost: Optional[float] = None
+    other_costs: Optional[float] = None
     business_capability_l1: str
     business_capability_l2: str
     business_capability_l3: str
