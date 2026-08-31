@@ -51,9 +51,16 @@ identification happens as part of the same call that judges sufficiency,
 for efficiency, and is deliberately cruder than a real extraction pass.
 The rigorous, claim-by-claim verified product list for the report is
 app.market_intelligence.extraction's job (feat/product-extraction-
-grounding, branch 13, not built here) -- this module's own output is
-explicitly a *candidate* list for that stage to re-process, not the
-final word on what was found.
+grounding, branch 13) -- this module's own output is explicitly a
+*candidate* list for that stage to re-process, not the final word on
+what was found.
+
+For that stage to ground each claim against real retrieved text rather
+than against the model's own earlier rationales, this loop keeps every
+search result it saw -- deduplicated by URL -- in retrieved_evidence,
+and conclude_node passes it through as conclusion["evidence"]. That is
+the only reason the field exists; nothing in the loop's own control flow
+reads it.
 """
 
 from __future__ import annotations
@@ -99,6 +106,11 @@ class AgentState(TypedDict, total=False):
     judgment) so the diminishing-returns count is reliable."""
     last_new_count: int
     last_search_results: List[Dict[str, Any]]
+    retrieved_evidence: List[Dict[str, Any]]
+    """Every distinct search result seen across all iterations of this
+    branch, deduplicated by URL, kept only so branch 13's grounding
+    check has real retrieved text to verify claims against (see module
+    docstring). The loop itself never routes on it."""
     sufficiency_rationale: str
     stop_reason: Optional[str]
     stop_rationale: str
@@ -276,6 +288,25 @@ def _call_assessment(
     return arguments
 
 
+def _accumulate_evidence(
+    existing: List[Dict[str, Any]], new_results: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Append the new results the loop has not seen before, keyed by URL
+    (a result with no URL is always kept -- it cannot be de-duplicated,
+    and dropping it would lose grounding text). Order is stable: earlier
+    iterations' evidence stays first."""
+    accumulated = list(existing)
+    seen_urls = {row.get("url") for row in accumulated if row.get("url")}
+    for row in new_results:
+        url = row.get("url")
+        if url and url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
+        accumulated.append(row)
+    return accumulated
+
+
 def search_node(state: AgentState) -> Dict[str, Any]:
     results = tools.search(state["current_query"])
     if results is None:
@@ -285,7 +316,14 @@ def search_node(state: AgentState) -> Dict[str, Any]:
             "stop_rationale": f"Search failed for query {state['current_query']!r}.",
         }
     queries_tried = list(state.get("queries_tried") or []) + [state["current_query"]]
-    return {"last_search_results": [r.as_dict() for r in results], "queries_tried": queries_tried}
+    result_dicts = [r.as_dict() for r in results]
+    return {
+        "last_search_results": result_dicts,
+        "queries_tried": queries_tried,
+        "retrieved_evidence": _accumulate_evidence(
+            state.get("retrieved_evidence") or [], result_dicts
+        ),
+    }
 
 
 def assess_node(state: AgentState) -> Dict[str, Any]:
@@ -398,6 +436,7 @@ def conclude_node(state: AgentState) -> Dict[str, Any]:
         "stop_rationale": state.get("stop_rationale", ""),
         "iterations_used": state.get("iteration", 1),
         "queries_tried": state.get("queries_tried") or [],
+        "evidence": state.get("retrieved_evidence") or [],
         "no_viable_alternative_found": (
             len(products) == 0 and stop_reason in (STOP_SUFFICIENCY, STOP_DIMINISHING_RETURNS)
         ),
@@ -426,6 +465,7 @@ def initial_state(segment: Dict[str, Any], *, run_id: str, data_sensitivity: str
         iteration=1,
         queries_tried=[],
         known_products={},
+        retrieved_evidence=[],
         last_new_count=0,
         stop_reason=None,
         stop_rationale="",

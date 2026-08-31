@@ -451,6 +451,57 @@ def test_already_identified_products_are_passed_to_the_next_iteration(monkeypatc
     assert captured_data[1]["already_identified_products"] == ["Vendor X"]
 
 
+# --- retained evidence for branch 13's grounding check ----------------------
+
+
+def test_retrieved_evidence_is_carried_into_the_conclusion(monkeypatch):
+    """conclusion["evidence"] is what branch 13's deterministic grounding
+    check reads -- the actual retrieved search text, not the model's
+    rationales. The loop itself never routes on it."""
+    monkeypatch.setattr(
+        mi.tools, "search",
+        lambda query, **kw: [_search_result(url="https://x.example", content="Vendor X does onboarding.")],
+    )
+    monkeypatch.setattr(
+        mi, "get_completion",
+        lambda sensitivity, request: _assessment_response([_product("Vendor X")], sufficient=True, rationale="r"),
+    )
+
+    conclusion = _run(_segment())
+
+    assert conclusion["evidence"] == [
+        {"title": "Vendor X Overview", "url": "https://x.example", "content": "Vendor X does onboarding."}
+    ]
+
+
+def test_evidence_accumulates_across_iterations_deduped_by_url(monkeypatch):
+    searches = [
+        [_search_result(url="https://a.example", content="A one"), _search_result(url="https://b.example", content="B one")],
+        [_search_result(url="https://b.example", content="B one"), _search_result(url="https://c.example", content="C one")],
+    ]
+    responses = [
+        _assessment_response([_product("Vendor Alpha")], sufficient=False, rationale="more", reformulated_query="q2"),
+        _assessment_response([_product("Vendor Charlie")], sufficient=True, rationale="done"),
+    ]
+    monkeypatch.setattr(mi.tools, "search", lambda query, **kw: searches.pop(0))
+    monkeypatch.setattr(mi, "get_completion", lambda sensitivity, request: responses.pop(0))
+
+    conclusion = _run(_segment())
+
+    urls = [row["url"] for row in conclusion["evidence"]]
+    assert urls == ["https://a.example", "https://b.example", "https://c.example"]  # b not duplicated, order stable
+
+
+def test_evidence_is_empty_when_the_first_search_fails(monkeypatch):
+    monkeypatch.setattr(mi.tools, "search", lambda query, **kw: None)
+    monkeypatch.setattr(mi, "get_completion", lambda *a, **k: pytest.fail("assessment must not run"))
+
+    conclusion = _run(_segment())
+
+    assert conclusion["stop_reason"] == mi.STOP_FAILURE
+    assert conclusion["evidence"] == []
+
+
 # --- graph topology -----------------------------------------------------------
 
 
