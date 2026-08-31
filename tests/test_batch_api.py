@@ -1,4 +1,4 @@
-"""HTTP layer for the async batch job -- CLAUDE.md sections 11, 14.
+"""HTTP layer for the async batch job -- SPEC.md sections 11, 14.
 
 Mounts only app.api.batch.router on a bare FastAPI app (never
 app.main, which pulls the legacy service chain and touches the real DB)
@@ -89,7 +89,7 @@ def test_resuming_a_completed_run_is_409(client):
     assert "not awaiting review" in again.json()["detail"]
 
 
-# --- data-sensitivity routing flag (CLAUDE.md section 11) -----------
+# --- data-sensitivity routing flag (SPEC.md section 11) -----------
 
 
 def test_data_sensitivity_defaults_to_real_when_omitted(client):

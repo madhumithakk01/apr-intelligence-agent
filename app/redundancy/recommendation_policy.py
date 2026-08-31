@@ -1,4 +1,4 @@
-"""Non-compensatory recommendation policy -- CLAUDE.md sections 9, 10.
+"""Non-compensatory recommendation policy -- SPEC.md sections 9, 10.
 
 Deterministic, applied after the typology label; ordered, not weighted,
 so savings can never mask a compliance problem (section 9):
@@ -17,7 +17,7 @@ These gates only have a decision to make for the two typologies where
 consolidation is even on the table (True Duplicate, Scale-Tiered
 Overlap). Partial/Component Overlap, Distinct, Indeterminate, and
 Adjudication Failed each have one fixed recommendation directly off the
-typology -- CLAUDE.md section 9's own typology table already states it.
+typology -- SPEC.md section 9's own typology table already states it.
 
 A gate that cannot read what it needs (an unrecognized qualitative label
 -- this branch has no access to feat/qualitative-scoring's calibrated
@@ -26,7 +26,7 @@ that the same as the deterministic pre-check in adjudicator.py treats a
 missing value: refuse to authorize consolidation and require review,
 never guess which way an unreadable label would have gone.
 
-evaluate() is what finalizes gate 3 (CLAUDE.md section 10): a verdict's
+evaluate() is what finalizes gate 3 (SPEC.md section 10): a verdict's
 own `mandatory_review` already covers Indeterminate, Adjudication
 Failed, full disagreement, and a True-Duplicate majority
 (adjudicator.py); this module adds the other named trigger --
@@ -65,11 +65,11 @@ class RecommendationResult:
     "cost_does_not_justify" | None (nothing blocked it, or there was
     never anything to block -- see recommendation for which)."""
     mandatory_review: bool
-    """The final CLAUDE.md section 10 gate-3 trigger -- the verdict's
+    """The final SPEC.md section 10 gate-3 trigger -- the verdict's
     own mandatory_review, plus Scale-Tiered Overlap actually recommending
     consolidation."""
     phase2_discovery: bool
-    """Whether this pair belongs on the Phase 2 discovery log (CLAUDE.md
+    """Whether this pair belongs on the Phase 2 discovery log (SPEC.md
     section 9): Partial/Component Overlap always does; Indeterminate and
     Adjudication Failed always do (there is unresolved work here);
     Distinct never does; True Duplicate / Scale-Tiered Overlap do only
@@ -170,7 +170,7 @@ def _cost_justifies_consolidation(a: ApplicationProfile, b: ApplicationProfile) 
 
 
 def _technical_feasibility_note(a: ApplicationProfile, b: ApplicationProfile) -> str:
-    """Never blocks (CLAUDE.md section 9: decides *how*, not *whether*)
+    """Never blocks (SPEC.md section 9: decides *how*, not *whether*)
     -- always returns guidance text to append to the recommendation."""
     shared_stack = set(a.technical.technology_stack_tokens) & set(b.technical.technology_stack_tokens)
     if shared_stack:
@@ -234,7 +234,7 @@ def evaluate(
         typology=typology,
         recommendation=recommendation,
         consolidation_blocked_by=None,
-        mandatory_review=True,  # CLAUDE.md section 10: always, regardless of ensemble confidence
+        mandatory_review=True,  # SPEC.md section 10: always, regardless of ensemble confidence
         phase2_discovery=False,
         rationale="No gate blocked consolidation.",
     )

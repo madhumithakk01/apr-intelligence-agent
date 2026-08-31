@@ -1,4 +1,4 @@
-"""Report assembly -- CLAUDE.md sections 5, 13.
+"""Report assembly -- SPEC.md sections 5, 13.
 
 Pure data transformation over GraphState; no mocks needed anywhere.
 """

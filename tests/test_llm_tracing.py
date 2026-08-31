@@ -1,4 +1,4 @@
-"""LangSmith call tracing -- CLAUDE.md section 15.
+"""LangSmith call tracing -- SPEC.md section 15.
 
 No network and no real LangSmith key anywhere: the disabled path is the
 default (conftest clears the env vars), and the enabled path is tested

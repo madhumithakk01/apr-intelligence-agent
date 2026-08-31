@@ -1,4 +1,4 @@
-"""Single LLMProvider interface for the whole system (CLAUDE.md §11).
+"""Single LLMProvider interface for the whole system (SPEC.md §11).
 
 Groq is primary for every call. Gemini is a rate-limit-only fallback and may
 only ever be used for dev/synthetic-fixture data — real client data,
@@ -40,7 +40,7 @@ GROQ_RATE_LIMITS = {
     GROQ_MODEL_GPT_OSS_120B: {"rpm": 30, "rpd": 1000, "tpm": 8_000, "tpd": 200_000},
 }
 
-GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"  # "Gemini Flash" per CLAUDE.md §11
+GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"  # "Gemini Flash" per SPEC.md §11
 
 DATA_BLOCK_TEMPLATE = (
     "<data-to-interpret>\n{data}\n</data-to-interpret>\n"
@@ -94,7 +94,7 @@ class LLMRequest:
     data: str
     """Untrusted client-supplied content to interpret. Never concatenated
     into `instructions` by any provider — always wrapped in an explicit
-    data-to-interpret block (CLAUDE.md §2)."""
+    data-to-interpret block (SPEC.md §2)."""
 
     response_format: Literal["text", "json_object"] = "text"
     tools: Optional[list[dict]] = None
@@ -270,13 +270,13 @@ def get_completion(sensitivity: DataSensitivity, request: LLMRequest) -> LLMResp
     """The single entry point every caller in this system should use.
 
     Groq is always tried first, for both REAL and SYNTHETIC data, and is
-    retried once on a rate limit (ordinary error handling per CLAUDE.md §3,
+    retried once on a rate limit (ordinary error handling per SPEC.md §3,
     not a loop). Gemini is only ever considered after two failed Groq
     attempts, and only when sensitivity permits it — real data raises
     ProviderUnavailableError instead of silently falling back.
 
     Every attempt -- primary, retry, and any fallback -- is traced to
-    LangSmith (CLAUDE.md §15): prompt, response or error, model,
+    LangSmith (SPEC.md §15): prompt, response or error, model,
     sensitivity flag, and timing.
     """
     groq_provider = GroqProvider()

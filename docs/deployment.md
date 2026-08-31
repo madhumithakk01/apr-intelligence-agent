@@ -1,6 +1,6 @@
 # Deployment
 
-CLAUDE.md section 15. The service is a single FastAPI app
+SPEC.md section 15. The service is a single FastAPI app
 (`app.main:app`) exposing the async batch job API: `/api/runs` (submit /
 poll / resume), `/api/shadow` (the shadow-mode delivery gate), and
 `/api/retention` (the bid-outcome purge).
@@ -23,7 +23,7 @@ and dev scripts out of the build context.
 |---|---|---|
 | `GROQ_API_KEY` | yes | Primary LLM provider. Without it the pipeline cannot score. |
 | `TAVILY_API_KEY` | for market research | Search tool for the market intelligence agent. |
-| `GEMINI_API_KEY` | no | Rate-limit-only fallback, **synthetic data only** (CLAUDE.md section 11). |
+| `GEMINI_API_KEY` | no | Rate-limit-only fallback, **synthetic data only** (SPEC.md section 11). |
 | `LANGSMITH_API_KEY` | no | Call tracing. Absent -> `app.llm.tracing` is a silent no-op. |
 | `LANGSMITH_PROJECT` | no | LangSmith project name (default `apr-intelligence-agent`). |
 | `PORT` | injected by host | uvicorn bind port; defaults to 8000. |
@@ -66,7 +66,7 @@ Both stores move to Postgres at the same time, at two swap points:
 No pipeline code changes: every stage already treats the checkpointer as
 opaque.
 
-## Shadow mode (CLAUDE.md section 2)
+## Shadow mode (SPEC.md section 2)
 
 Nothing the pipeline produces is client-deliverable until a full run has
 executed in **shadow mode** and an internal reviewer has signed it off.
@@ -92,7 +92,7 @@ executed in **shadow mode** and an internal reviewer has signed it off.
 - `.github/workflows/ci.yml` — lint (`ruff check .`), the full test
   suite (`pytest tests/`), and a `docker build` of this image.
 
-## Data deletion (CLAUDE.md section 2)
+## Data deletion (SPEC.md section 2)
 
 Cached and stored client data has one deletion trigger -- the bid
 concluded -- not a TTL. `app.retention.purge.purge_all_client_data` is

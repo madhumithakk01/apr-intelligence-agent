@@ -1,13 +1,13 @@
-"""Scoring kernel -- CLAUDE.md section 13.
+"""Scoring kernel -- SPEC.md section 13.
 
 Single source of truth for TIM-E scoring, COTS-fit scoring, and the
 skill-availability floor. Consolidates the two divergent engines that
 used to live in app/services/agent_service.py (API path) and
-app/services/analysis_service.py (batch path) -- CLAUDE.md section 4,
+app/services/analysis_service.py (batch path) -- SPEC.md section 4,
 bug 2.
 
 Deterministic only, no LLM calls. Real qualitative LLM scoring
-(CLAUDE.md section 7: single call, 3-sample ensemble escalation on low
+(SPEC.md section 7: single call, 3-sample ensemble escalation on low
 confidence) is feat/qualitative-scoring (branch 8) --
 score_qualitative_label below is this branch's explicit, honestly
 labeled deferral point for that future replacement, matching how
@@ -29,9 +29,9 @@ QUALITATIVE_LABELS = {
     "very low": 1,
 }
 """The only 5 labels this deterministic kernel can score. Anything else
--- including CLAUDE.md's own cited real examples ("too risky," "Somewhat
+-- including SPEC.md's own cited real examples ("too risky," "Somewhat
 cumbersome," "cannot say") -- is unscored (None), never defaulted
-(CLAUDE.md section 4, bug 1)."""
+(SPEC.md section 4, bug 1)."""
 
 
 def score_qualitative_label(value: Optional[str]) -> Optional[int]:
@@ -73,7 +73,7 @@ class ScoringInput:
     market_product_count: int = 0
     """Count of products already retrieved by the caller's own market
     intelligence integration (agent_service.py's MarketService/Tavily
-    call, out of this branch's scope -- CLAUDE.md section 8). The
+    call, out of this branch's scope -- SPEC.md section 8). The
     kernel never calls MarketService and never sees product objects,
     only this count. Callers that don't perform retrieval (the batch
     path) pass 0."""
@@ -138,7 +138,7 @@ def _aggregate_cost(
 def _cost_bucket(cost: CostAggregate) -> Optional[int]:
     """None if every cost component is withheld/unparsed -- never
     guessed as bucket 1, which would silently understate a withheld
-    high cost (CLAUDE.md section 2)."""
+    high cost (SPEC.md section 2)."""
     if cost.total_known is None:
         return None
     total = cost.total_known
@@ -180,7 +180,7 @@ def _apply_skill_availability_floor(
     skill_availability: Optional[str],
     application_stability: Optional[str],
 ) -> Tuple[str, Optional[str]]:
-    """CLAUDE.md section 4 bug 5: low skill availability + fragile
+    """SPEC.md section 4 bug 5: low skill availability + fragile
     stability forces a minimum "Migrate," overriding a high raw score.
     Checked against the raw stability axis, not the blended
     health_score, so folding Availability/Reliability/Scalability in
@@ -212,7 +212,7 @@ def compute_tim_e(inputs: ScoringInput) -> TimEResult:
             AxisScore("availability", score_qualitative_label(inputs.availability)),
             AxisScore("reliability", score_qualitative_label(inputs.reliability)),
             AxisScore("scalability", score_qualitative_label(inputs.scalability)),
-            # application_security_level intentionally excluded -- CLAUDE.md
+            # application_security_level intentionally excluded -- SPEC.md
             # section 4 bug 4. It is a data-classification label, not a
             # technical-health axis; see security_classification below.
         ]
@@ -313,7 +313,7 @@ def compute_cots_fit(inputs: ScoringInput) -> CotsFitResult:
 def recommend_modernization_path(tim_e: TimEResult, cots: CotsFitResult, market_product_count: int) -> str:
     """Single canonical modernization category, replacing
     agent_service.py's old _modernization and analysis_service.py's old
-    _modernization_choice (CLAUDE.md section 4 bugs 2 and 3 -- the
+    _modernization_choice (SPEC.md section 4 bugs 2 and 3 -- the
     latter's separate `cots_score >= 70` check was the exact source of
     the 65-vs-70 contradiction; compute_cots_fit above is now the only
     place in the codebase that compares a COTS score to a threshold)."""

@@ -1,4 +1,4 @@
-"""Redundancy typology regression -- the CLAUDE.md section 9 table, end to end.
+"""Redundancy typology regression -- the SPEC.md section 9 table, end to end.
 
 test_redundancy_adjudicator.py covers the ensemble mechanics and
 test_recommendation_policy.py covers the four non-compensatory gates in

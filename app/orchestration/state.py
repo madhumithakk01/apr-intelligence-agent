@@ -1,4 +1,4 @@
-"""Top-level run state for the orchestration graph -- CLAUDE.md section 13.
+"""Top-level run state for the orchestration graph -- SPEC.md section 13.
 
 One state object flows through the whole pipeline (section 5). Every
 field that a fanned-out branch can write carries an explicit reducer,
@@ -7,7 +7,7 @@ without one only when it can -- and silently rejects them when it
 can't. The reducers here are all key-disjoint merges or appends: a
 branch writes only its own subject's key, never another branch's, so
 two branches finishing in either order produce the same state. That is
-what makes the parallel-isolation guarantee in CLAUDE.md section 8
+what makes the parallel-isolation guarantee in SPEC.md section 8
 ("checkpointed independently so one branch's failure doesn't take down
 the others") testable rather than aspirational.
 
@@ -48,7 +48,7 @@ def extend(left: Optional[list], right: Optional[list]) -> list:
 
 
 class ReviewItem(TypedDict, total=False):
-    """One item queued for an internal human reviewer (CLAUDE.md section
+    """One item queued for an internal human reviewer (SPEC.md section
     10). All review is internal to our own firm -- nothing here routes
     back to the client (section 2)."""
 
@@ -61,7 +61,7 @@ class ReviewItem(TypedDict, total=False):
 class BranchFailure(TypedDict, total=False):
     """A single fanned-out branch that failed. Recorded, never raised
     past the branch boundary: one segment's search failure must not take
-    the other 99 rows' run down with it (CLAUDE.md section 8)."""
+    the other 99 rows' run down with it (SPEC.md section 8)."""
 
     branch_kind: str  # "disclosure" | "qualitative" | "redundancy" | "market"
     subject_id: str
@@ -84,14 +84,14 @@ class GraphState(TypedDict, total=False):
     run_id: str
 
     data_sensitivity: str
-    """"real" | "synthetic" -- CLAUDE.md section 11's routing flag, carried
+    """"real" | "synthetic" -- SPEC.md section 11's routing flag, carried
     on the run itself so every LLM-backed stage inherits one declared
     value instead of deciding locally. Passed to llm.providers.get_completion
     by every stage that calls it, starting with disclosure classification
     (branch 6)."""
 
     run_mode: str
-    """"shadow" | "live" -- CLAUDE.md section 2. Defaults to "shadow"
+    """"shadow" | "live" -- SPEC.md section 2. Defaults to "shadow"
     (app.orchestration.graph.initial_state); an unspecified or
     unrecognized value is treated as "shadow". A shadow run's report is
     never client-deliverable, and a live run's report is deliverable
@@ -112,7 +112,7 @@ class GraphState(TypedDict, total=False):
 
     ingestion_collisions: List[Dict[str, Any]]
     """Application IDs that occurred more than once in the loaded
-    workbook. Surfaced, never silently dropped (CLAUDE.md section 4 bug
+    workbook. Surfaced, never silently dropped (SPEC.md section 4 bug
     7) -- every colliding row is excluded from `applications` rather than
     picking a first-write winner."""
 
@@ -153,7 +153,7 @@ class GraphState(TypedDict, total=False):
 
     segments: List[Dict[str, Any]]
     """Redundancy-surviving segments -- the Market Intelligence fan-out
-    unit (CLAUDE.md section 8: once per segment, not once per raw app, so
+    unit (SPEC.md section 8: once per segment, not once per raw app, so
     a Scale-Tiered Overlap yields two differently-framed targets)."""
 
     market_findings: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
@@ -164,7 +164,7 @@ class GraphState(TypedDict, total=False):
     grounded_claims: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
     """segment_id -> report-ready product list whose every claim has been
     substring-verified against that segment's retrieved search text
-    (app.market_intelligence.extraction, CLAUDE.md section 5). Populated
+    (app.market_intelligence.extraction, SPEC.md section 5). Populated
     by the linear extract_and_ground_products stage once the market
     fan-out has joined; keyed the same way as market_findings."""
 

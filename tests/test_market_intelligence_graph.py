@@ -1,4 +1,4 @@
-"""The market intelligence agent -- CLAUDE.md sections 3, 5, 8, 12.
+"""The market intelligence agent -- SPEC.md sections 3, 5, 8, 12.
 
 Never touches a real provider or a real search: every test mocks
 app.market_intelligence.graph.get_completion and
@@ -92,7 +92,7 @@ def test_sufficiency_stops_the_loop_with_exactly_one_iteration(monkeypatch):
 
 
 def test_sufficiency_with_zero_products_is_a_confident_no_viable_alternative(monkeypatch):
-    """CLAUDE.md section 8's first legitimate terminal state: a bespoke
+    """SPEC.md section 8's first legitimate terminal state: a bespoke
     capability with no real market presence is a valid, high-confidence
     conclusion, not an error."""
     monkeypatch.setattr(mi.tools, "search", lambda query, **kw: [_search_result()])
@@ -266,7 +266,7 @@ def test_malformed_assessment_response_fails_closed(monkeypatch):
 
 
 def test_checkpointing_lets_a_failed_branch_resume_from_where_it_left_off(monkeypatch):
-    """CLAUDE.md section 8: checkpointed independently, so a failure
+    """SPEC.md section 8: checkpointed independently, so a failure
     resumes that branch rather than restarting research from scratch --
     verified here by resuming into a state where sufficiency is now
     reached, and confirming the product found before the failure is

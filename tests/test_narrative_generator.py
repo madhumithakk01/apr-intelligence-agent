@@ -1,4 +1,4 @@
-"""Report narrative generation -- CLAUDE.md sections 5, 10.
+"""Report narrative generation -- SPEC.md sections 5, 10.
 
 Never touches a real provider: every test that reaches the LLM call
 mocks app.narrative.generator.get_completion. The grounding check and

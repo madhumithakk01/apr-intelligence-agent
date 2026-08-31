@@ -1,4 +1,4 @@
-"""Deployment wiring -- CLAUDE.md sections 15, 16.
+"""Deployment wiring -- SPEC.md sections 15, 16.
 
 Structural guards, in the spirit of test_scoring_kernel.py's
 source-reading checks: the Dockerfile, the CI workflows, the Render
@@ -25,7 +25,7 @@ def _read(rel: str) -> str:
 
 def test_dockerfile_matches_the_documented_shape():
     text = _read("Dockerfile")
-    assert "FROM python:3.12-slim" in text  # CLAUDE.md section 15
+    assert "FROM python:3.12-slim" in text  # SPEC.md section 15
     assert "requirements.txt" in text
     assert "COPY app ./app" in text
     assert "uvicorn app.main:app" in text
@@ -66,7 +66,7 @@ def test_ci_workflow_adds_lint_full_suite_and_image_build():
 
 
 def test_no_ci_workflow_configures_provider_secrets():
-    # CLAUDE.md section 11: the suite is hermetic; a real key must never
+    # SPEC.md section 11: the suite is hermetic; a real key must never
     # be needed to pass CI.
     for name in ("ci.yml", "golden-subset.yml"):
         text = _read(f".github/workflows/{name}").lower()

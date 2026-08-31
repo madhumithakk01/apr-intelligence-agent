@@ -1,4 +1,4 @@
-"""Bid-outcome data purge -- CLAUDE.md section 2.
+"""Bid-outcome data purge -- SPEC.md section 2.
 
 Cached and stored client data has one deletion trigger -- the bid
 concluded -- not a TTL, and nothing here assumes indefinite retention.
@@ -37,6 +37,9 @@ from typing import Callable, List, Optional
 from app.orchestration.checkpointer import purge_checkpoint_store
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# applications is the live table; market_products and analysis_runs were
+# dropped with the legacy path but a pre-existing deployment may still
+# carry them with client data, so the purge clears them if present.
 _APP_DB_CLIENT_TABLES = ("applications", "market_products", "analysis_runs")
 
 
@@ -255,7 +258,7 @@ def purge_all_client_data(
 def _main(argv: Optional[List[str]] = None) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Purge all client data on the bid-outcome trigger (CLAUDE.md section 2).")
+    parser = argparse.ArgumentParser(description="Purge all client data on the bid-outcome trigger (SPEC.md section 2).")
     parser.add_argument("--reason", required=True, help="the bid outcome authorizing the purge")
     parser.add_argument("--dry-run", action="store_true", help="report what would be removed; delete nothing")
     parser.add_argument("--confirm", action="store_true", help="required for a real (non-dry-run) purge")

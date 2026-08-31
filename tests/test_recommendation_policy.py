@@ -1,4 +1,4 @@
-"""Non-compensatory recommendation policy -- CLAUDE.md sections 9, 10."""
+"""Non-compensatory recommendation policy -- SPEC.md sections 9, 10."""
 
 from __future__ import annotations
 

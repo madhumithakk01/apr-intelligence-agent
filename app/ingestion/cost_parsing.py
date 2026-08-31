@@ -1,11 +1,11 @@
-"""Safe numeric parsing for ingested cost/count cells (CLAUDE.md section 4.6).
+"""Safe numeric parsing for ingested cost/count cells (SPEC.md section 4.6).
 
 Resolution order, each step only reached if the previous one declines:
   1. Direct numeric parse (covers the common case -- pandas already yields
      clean numeric dtypes for most real cells).
   2. Deterministic refusal-keyword match (see validators.is_refusal_text)
      -- "cannot disclose" etc. This is a business decision, not a
-     data-quality defect (CLAUDE.md section 2): anything matching is
+     data-quality defect (SPEC.md section 2): anything matching is
      marked withheld immediately and never reaches step 4. This is a
      keyword search, not an exhaustive phrase list, precisely so free-text
      variation on a known refusal ("client declined to disclose") is still

@@ -1,4 +1,4 @@
-"""Async batch job runner -- CLAUDE.md sections 11, 14, 15.
+"""Async batch job runner -- SPEC.md sections 11, 14, 15.
 
 Two kinds of test here:
   * the real graph, driven over an empty portfolio -- fully hermetic

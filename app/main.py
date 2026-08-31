@@ -1,10 +1,10 @@
-"""FastAPI entrypoint -- CLAUDE.md section 15.
+"""FastAPI entrypoint -- SPEC.md section 15.
 
-The portfolio-scale pipeline (CLAUDE.md section 5) is an async job:
+The portfolio-scale pipeline (SPEC.md section 5) is an async job:
 submit, poll, resume. This module wires the DB, mounts the three API
 routers, and does nothing else -- the single-record `/analyze` path and
 its legacy scoring/report services were removed once the async pipeline
-fully replaced them (CLAUDE.md sections 4.2, 4.8, 5).
+fully replaced them (SPEC.md sections 4.2, 4.8, 5).
 """
 
 from dotenv import load_dotenv

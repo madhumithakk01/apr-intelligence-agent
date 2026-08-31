@@ -1,11 +1,11 @@
-"""Redundancy adjudication -- CLAUDE.md sections 5, 8, 9, 10, 12.
+"""Redundancy adjudication -- SPEC.md sections 5, 8, 9, 10, 12.
 
 Technique per section 5's table: a 3-sample ensemble per candidate pair
 -- not an open loop ("all evidence already sits in the file"), and not
 single-call-by-default like qualitative scoring: every pair that
 survives the deterministic pre-check below gets the full ensemble
 unconditionally. The "one optional single tool call" the same table row
-mentions is not implemented on this branch -- CLAUDE.md does not specify
+mentions is not implemented on this branch -- SPEC.md does not specify
 what it would look up beyond what the profile already carries, and
 nothing here needs one; noting the omission rather than inventing a
 call.
@@ -16,7 +16,7 @@ dicts, so this module inherits the same "unknown is None, never guessed"
 discipline profile-building already established.
 
 Indeterminate — Withheld Data is a deterministic pre-check, not an
-ensemble outcome: CLAUDE.md section 9 names the fields a verdict can
+ensemble outcome: SPEC.md section 9 names the fields a verdict can
 depend on (cost, security classification, criticality) that are
 "actually likely to be withheld." If any of the three is unknown for
 either application, no LLM call is made at all -- there is nothing an
@@ -60,7 +60,7 @@ PARTIAL_COMPONENT_OVERLAP = "Partial/Component Overlap"
 DISTINCT = "Distinct"
 INDETERMINATE_WITHHELD_DATA = "Indeterminate — Withheld Data"
 ADJUDICATION_FAILED = "Adjudication Failed"
-"""Not one of CLAUDE.md section 9's five typologies -- an explicit
+"""Not one of SPEC.md section 9's five typologies -- an explicit
 failure state for when the ensemble itself could not be completed, kept
 distinct from Indeterminate (a legitimate data-driven conclusion) so a
 report never conflates "the client withheld this" with "our own
@@ -110,7 +110,7 @@ class AdjudicationVerdict:
     resolution: str  # "deterministic_withheld" | "unanimous" | "majority" | "full_disagreement" | "failed"
     votes: List[EnsembleVote]
     mandatory_review: bool
-    """The typology-stage contribution to gate 3 (CLAUDE.md section 10):
+    """The typology-stage contribution to gate 3 (SPEC.md section 10):
     Indeterminate, Adjudication Failed, full disagreement, or a majority
     of True Duplicate. recommendation_policy.evaluate adds the
     Scale-Tiered-Overlap-recommending-consolidation half and is what a
@@ -134,7 +134,7 @@ _WITHHELD_DATA_FIELDS = ("cost", "security classification", "criticality")
 
 
 def _withheld_data_reason(a: ApplicationProfile, b: ApplicationProfile) -> Optional[str]:
-    """CLAUDE.md section 9: cost, security classification, and
+    """SPEC.md section 9: cost, security classification, and
     criticality are the comparison fields "actually likely to be
     withheld," and a verdict can only be Indeterminate on these three --
     not on every possibly-missing field a profile carries."""
@@ -341,7 +341,7 @@ def adjudicate_cluster(
     data_sensitivity: DataSensitivity,
 ) -> List[AdjudicationVerdict]:
     """Every pair within one cluster -- O(k^2) per cluster, the accepted
-    cost at current scale (CLAUDE.md section 9's scaling note). Pairs
+    cost at current scale (SPEC.md section 9's scaling note). Pairs
     are ordered by input order for determinism, not adjudicated twice in
     either direction."""
     verdicts: List[AdjudicationVerdict] = []

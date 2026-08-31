@@ -1,4 +1,4 @@
-"""Cost outlier explainability -- CLAUDE.md sections 5, 10, 12.
+"""Cost outlier explainability -- SPEC.md sections 5, 10, 12.
 
 Never touches a real provider: every test mocks
 app.cost_intelligence.explainability.get_completion, matching the

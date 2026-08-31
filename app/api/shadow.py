@@ -1,4 +1,4 @@
-"""HTTP layer for the shadow-mode delivery gate -- CLAUDE.md section 2.
+"""HTTP layer for the shadow-mode delivery gate -- SPEC.md section 2.
 
   GET  /api/shadow          engagement delivery status: is client
                             delivery unlocked, which shadow runs have

@@ -1,13 +1,13 @@
-"""Redundancy-surviving segment construction -- CLAUDE.md sections 8, 9.
+"""Redundancy-surviving segment construction -- SPEC.md sections 8, 9.
 
-Deterministic, and deliberately not one of the three files CLAUDE.md
+Deterministic, and deliberately not one of the three files SPEC.md
 section 13 names for this package (graph.py, tools.py, extraction.py) --
 this logic earns its own module because it is a distinct responsibility
 (deciding *what* the agent researches) from both the adjudication policy
 that feeds it (app.redundancy.recommendation_policy) and the agent loop
 that consumes its output (graph.py).
 
-CLAUDE.md section 8: the agent fans out "once per redundancy-surviving
+SPEC.md section 8: the agent fans out "once per redundancy-surviving
 segment -- not once per raw app; segments come from the typology in
 section 9, so a Scale-Tiered Overlap produces two differently-framed
 research targets from one cluster." Section 9's typology table states
@@ -38,7 +38,7 @@ heavier," not a second copy of it here.
 Query text is built only from capability labels and technology stack --
 never application names, owner/email, or cost figures -- since it is
 sent to an external search API (app.market_intelligence.tools), not an
-LLM call gated by CLAUDE.md section 11's DataSensitivity rule.
+LLM call gated by SPEC.md section 11's DataSensitivity rule.
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ class Segment:
     """The application's own name and technology-stack components --
     never used in seed_query (which must not leak client-specific
     product names into an external search), but needed by the agent's
-    self-match filter (CLAUDE.md section 8) to recognize when a search
+    self-match filter (SPEC.md section 8) to recognize when a search
     result is naming the client's own system rather than a competitor."""
 
     def as_dict(self) -> Dict[str, Any]:

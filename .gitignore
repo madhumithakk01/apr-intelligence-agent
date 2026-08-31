@@ -8,7 +8,7 @@ reports/
 data/
 .env.example
 install_log.txt
-CLAUDE.MD
+SPEC.md
 system_design.md
 *.xlsx
 *.xls

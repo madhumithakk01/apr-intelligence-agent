@@ -1,4 +1,4 @@
-"""Multi-axis profile building -- CLAUDE.md sections 5 and 9.
+"""Multi-axis profile building -- SPEC.md sections 5 and 9.
 
 Deterministic. Replaces any single blended similarity score: each
 application gets a profile of five axes kept *separate* -- "the
@@ -15,13 +15,13 @@ not this module's.
   - Cost: normalized cost-per-FTE, never a raw annual total, which
     misleads across applications of very different scale
   - Risk/classification: Application Security Level (a data-
-    classification label, not a health rating -- CLAUDE.md section 4 bug
+    classification label, not a health rating -- SPEC.md section 4 bug
     4), Application Stability, Availability
   - Technical: Technology Stack, Maintainability
 
 Self-reported "Functional redundancy" is carried on the profile as its
 own explicitly-flagged field, never folded into the functional axis or
-any other -- CLAUDE.md section 9: "subject to owner self-preservation
+any other -- SPEC.md section 9: "subject to owner self-preservation
 bias -- never trusted as a standalone signal."
 
 Every field here is None when the underlying value is missing or
@@ -102,7 +102,7 @@ class ScaleUsageAxis:
 @dataclass(frozen=True)
 class CostAxis:
     cost_per_fte: Optional[float]
-    """Total known annual cost / FTE Count (CLAUDE.md section 9: never a
+    """Total known annual cost / FTE Count (SPEC.md section 9: never a
     raw annual total). None if FTE Count is missing, zero, or every cost
     component is missing -- there is nothing to normalize."""
     is_complete: bool
@@ -151,7 +151,7 @@ class ApplicationProfile:
     risk_classification: RiskClassificationAxis
     technical: TechnicalAxis
     functional_redundancy_self_report: Optional[str]
-    """CLAUDE.md section 9: passed through as one input among several,
+    """SPEC.md section 9: passed through as one input among several,
     never used standalone -- see the module docstring."""
 
     def as_dict(self) -> Dict[str, Any]:
@@ -309,7 +309,7 @@ CAPABILITY_MATCH_SUPERFICIAL = "superficial"
 
 
 def capability_match_level(a: ApplicationProfile, b: ApplicationProfile) -> str:
-    """CLAUDE.md section 9's typology is phrased directly in terms of
+    """SPEC.md section 9's typology is phrased directly in terms of
     which capability levels match -- this is that comparison, made once
     so the adjudicator doesn't re-derive it per pair:
 

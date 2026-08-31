@@ -1,4 +1,4 @@
-"""Redundancy adjudication -- CLAUDE.md sections 5, 8, 9, 10, 12.
+"""Redundancy adjudication -- SPEC.md sections 5, 8, 9, 10, 12.
 
 Never touches a real provider: every test mocks
 app.redundancy.adjudicator.get_completion, matching the pattern already

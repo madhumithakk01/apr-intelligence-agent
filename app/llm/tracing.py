@@ -1,4 +1,4 @@
-"""LangSmith call tracing -- CLAUDE.md section 15.
+"""LangSmith call tracing -- SPEC.md section 15.
 
 Every ``get_completion`` attempt posts one LangSmith run: the prompt
 (both the code-authored instructions and the delimited client data), the
@@ -16,7 +16,7 @@ actually needs, so tracing never blocks or breaks a call.
 
 LangSmith stores client prompts and responses verbatim, so its project
 falls under the same bid-outcome deletion trigger as the checkpoint
-store and the DB rows (CLAUDE.md section 2) -- managed in the LangSmith
+store and the DB rows (SPEC.md section 2) -- managed in the LangSmith
 project itself, out of band from this code.
 
 This module never imports app.llm.providers (that would be circular): it

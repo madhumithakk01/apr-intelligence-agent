@@ -1,8 +1,8 @@
-"""Async batch job runner -- CLAUDE.md sections 11, 14, 15.
+"""Async batch job runner -- SPEC.md sections 11, 14, 15.
 
 A ~100-row portfolio run makes hundreds of rate-limited LLM calls and
 can stop at up to five human gates, so it cannot be a blocking request
-(CLAUDE.md section 11). This is the "submit -> run id -> poll -> resume"
+(SPEC.md section 11). This is the "submit -> run id -> poll -> resume"
 machinery around app.orchestration.graph:
 
   submit  registers a run, kicks execution onto a worker, returns now
@@ -12,7 +12,7 @@ machinery around app.orchestration.graph:
 
 Run status lives in an in-process registry; the resumable graph state
 lives in the LangGraph checkpointer (SQLite now, Postgres the stated
-production path -- the same migration point as the app DB, CLAUDE.md
+production path -- the same migration point as the app DB, SPEC.md
 section 15). After a process restart the registry is empty but the
 checkpoint file survives, so ``get`` falls back to reconstructing a
 coarse status from ``graph.get_state`` -- a client that kept its run id

@@ -1,4 +1,4 @@
-"""Product extraction and claim-level grounding -- CLAUDE.md sections 5, 13.
+"""Product extraction and claim-level grounding -- SPEC.md sections 5, 13.
 
 The market intelligence agent (app.market_intelligence.graph) ends each
 segment with a *candidate* product list -- cruder than a real extraction
@@ -10,7 +10,7 @@ This module turns that candidate list into the report-ready one:
      each real competing product together with the specific claims worth
      putting in front of the client -- each claim paired with a short
      phrase quoted verbatim from the evidence.
-  2. A deterministic, LLM-free grounding check (CLAUDE.md section 5: "No
+  2. A deterministic, LLM-free grounding check (SPEC.md section 5: "No
      LLM needed for the grounding check itself; verify each individual
      claim, not just the product name"). Every claim's quote must be
      found, as a normalized substring, in the retrieved search text. A
@@ -25,7 +25,7 @@ Fail-closed, like every LLM-calling module in this system: a provider
 failure or a malformed response yields an empty grounded list for that
 segment -- never an ungrounded one -- recorded with an ``error`` so the
 segment still surfaces downstream rather than silently vanishing. A
-segment the agent concluded has no viable COTS alternative (CLAUDE.md
+segment the agent concluded has no viable COTS alternative (SPEC.md
 section 8's legitimate terminal state) is passed straight through with
 that flag intact and no LLM call at all.
 """
@@ -45,7 +45,7 @@ _MAX_EVIDENCE_CONTENT_CHARS = 1500
 to the extraction call and used as the grounding corpus -- the same
 clipped text on both sides, so a verbatim quote the model returns is
 checked against exactly the text it was shown. A token-budget guard
-against Groq's TPM limits (CLAUDE.md section 11), not a decision
+against Groq's TPM limits (SPEC.md section 11), not a decision
 threshold, so it is a module constant rather than a governance
 parameter."""
 
@@ -258,7 +258,7 @@ def extract_and_ground(
     evidence = [row for row in (finding.get("evidence") or []) if isinstance(row, dict)]
 
     if finding.get("no_viable_alternative_found"):
-        # CLAUDE.md section 8: a confident "no viable COTS alternative"
+        # SPEC.md section 8: a confident "no viable COTS alternative"
         # is a legitimate terminal state, not something to re-extract.
         return _empty_result(
             finding, segment, attempted=False, candidate_count=len(candidates), error=None,
@@ -383,7 +383,7 @@ def extract_and_ground_all(
     data_sensitivity: DataSensitivity,
 ) -> Dict[str, Dict[str, Any]]:
     """One extraction+grounding pass per researched segment. Linear, not
-    fanned out (CLAUDE.md section 5): the market fan-out has already
+    fanned out (SPEC.md section 5): the market fan-out has already
     joined, and each segment's extraction stands alone on its own
     finding. Returned keyed by segment id, ready to merge into
     GraphState["grounded_claims"]."""

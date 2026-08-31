@@ -1,4 +1,4 @@
-"""Cost outlier detection -- CLAUDE.md sections 5, 9, 12. Purely
+"""Cost outlier detection -- SPEC.md sections 5, 9, 12. Purely
 deterministic: no LLM mocking needed anywhere in this file."""
 
 from __future__ import annotations

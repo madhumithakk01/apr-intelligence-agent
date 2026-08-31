@@ -1,4 +1,4 @@
-"""Capability blocking -- CLAUDE.md sections 5 and 9.
+"""Capability blocking -- SPEC.md sections 5 and 9.
 
 Deterministic candidate grouping, generous on purpose: "a pairing missed
 here can never be recovered downstream" (section 5). Blocking is O(n)
@@ -16,7 +16,7 @@ adjudicator at all -- making that typology label unreachable. Blocking
 must be coarser than the finest capability level specifically so the
 adjudicator has L3 divergence left to detect.
 
-Fallback hierarchy, generous by construction (CLAUDE.md section 9:
+Fallback hierarchy, generous by construction (SPEC.md section 9:
 "falling back to L1 or Department if L2/L3 is missing... never exclude a
 row from clustering entirely"):
 

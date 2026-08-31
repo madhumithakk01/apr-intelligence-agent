@@ -1,6 +1,6 @@
 {
   "fixture": "golden_subset",
-  "note": "Invented rows. No value, cost, or capability name is taken or derived from the client workbook -- see README.md. Exercises the scoring paths; does not validate the CLAUDE.md section 12 parameters, which needs real data and stays local.",
+  "note": "Invented rows. No value, cost, or capability name is taken or derived from the client workbook -- see README.md. Exercises the scoring paths; does not validate the SPEC.md section 12 parameters, which needs real data and stays local.",
   "snapshot_note": "kernel_snapshot is generated, not judged -- it records what app/scoring/kernel.py currently produces for each row, so an unintended scoring change fails a PR. analyst_labels are human judgments; they are filled by an internal reviewer, never generated.",
   "rows": {
     "GOLD-01": {

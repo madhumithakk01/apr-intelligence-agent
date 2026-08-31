@@ -1,4 +1,4 @@
-"""HTTP layer for the async batch job -- CLAUDE.md sections 11, 14.
+"""HTTP layer for the async batch job -- SPEC.md sections 11, 14.
 
 Thin: it validates input, calls app.orchestration.batch_runner, and
 maps its two error types onto status codes. All the run mechanics live
@@ -36,11 +36,11 @@ router = APIRouter(prefix="/api/runs", tags=["batch"])
 class RunSubmission(BaseModel):
     applications: List[Dict[str, Any]] = Field(default_factory=list)
     data_sensitivity: Literal["real", "synthetic"] = "real"
-    """CLAUDE.md section 11: defaults to "real" so an omitted flag fails
+    """SPEC.md section 11: defaults to "real" so an omitted flag fails
     closed -- the Groq-only routing applies unless a caller deliberately
     declares synthetic fixtures."""
     run_mode: Literal["shadow", "live"] = "shadow"
-    """CLAUDE.md section 2: defaults to "shadow" (internal review only).
+    """SPEC.md section 2: defaults to "shadow" (internal review only).
     A "live" run still runs, but its report is not client-deliverable
     until a shadow run for the engagement has been signed off
     (POST /api/shadow/signoff)."""

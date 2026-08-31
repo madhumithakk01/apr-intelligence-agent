@@ -1,4 +1,4 @@
-"""Rubric Calibration -- CLAUDE.md sections 4, 5, 6, 7, 10.
+"""Rubric Calibration -- SPEC.md sections 4, 5, 6, 7, 10.
 
 Never touches a real provider: every test mocks
 app.rubric.calibration.get_completion, matching the pattern already used
@@ -150,7 +150,7 @@ def test_all_non_canonical_values_are_batched_into_one_call(monkeypatch):
 
 
 def test_client_field_values_never_reach_the_instructions_text(monkeypatch):
-    """CLAUDE.md section 2: client-supplied free text is untrusted
+    """SPEC.md section 2: client-supplied free text is untrusted
     content, always delimited as data, never concatenated into the
     trusted instructions string."""
     calls = _make_llm_mock(
@@ -309,7 +309,7 @@ def test_calibrate_rubrics_covers_every_rubric_field(monkeypatch):
 
 
 def test_rubric_fields_excludes_classification_and_numeric_fields():
-    """CLAUDE.md section 4 bug 4: Application Security Level is data
+    """SPEC.md section 4 bug 4: Application Security Level is data
     classification, not a TIM-E axis, and is routed to the classification
     gate instead -- never calibrated as a scoring rubric. Cost/count
     fields are numeric, not qualitative."""

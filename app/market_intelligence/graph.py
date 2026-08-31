@@ -1,7 +1,7 @@
-"""The market intelligence agent -- CLAUDE.md sections 3, 5, 8, 12.
+"""The market intelligence agent -- SPEC.md sections 3, 5, 8, 12.
 
 The only component in this system that passes the agent-vs-deterministic
-test (CLAUDE.md section 3): the model decides, fresh each iteration,
+test (SPEC.md section 3): the model decides, fresh each iteration,
 whether to keep searching, over an evidence space (the open web) whose
 size genuinely cannot be known in advance. Everywhere else in this
 codebase an LLM call is a single structured call or a bounded ensemble;
@@ -17,7 +17,7 @@ provider failure on one segment resumes *that* segment from its last
 completed iteration without touching any other segment's progress.
 
 Loop: search -> assess -> (conclude | search again). Stop conditions,
-CLAUDE.md section 8 -- four distinct kinds, not to be conflated:
+SPEC.md section 8 -- four distinct kinds, not to be conflated:
 
   - Sufficiency (primary, model-owned): the assessment call judges
     coverage sufficient, or explicitly reasons the space has genuinely
@@ -33,7 +33,7 @@ CLAUDE.md section 8 -- four distinct kinds, not to be conflated:
     cost/time budget.
   - Failure/checkpoint: a search or assessment call failure ends the
     loop with stop_reason="failure" rather than retrying indefinitely or
-    guessing an answer -- CLAUDE.md's fail-closed discipline applied to
+    guessing an answer -- SPEC.md's fail-closed discipline applied to
     a loop instead of a single call.
 
 All three of section 8's "legitimate terminal states" are honored by
@@ -88,7 +88,7 @@ STOP_FAILURE = "failure"
 _MAX_RESULT_CONTENT_CHARS = 500
 """Each search result's content is truncated to this many characters
 before being sent to the assessment call -- a practical token-budget
-control against Groq's TPM limits (CLAUDE.md section 11), not a
+control against Groq's TPM limits (SPEC.md section 11), not a
 correctness-critical value; not itemized in governance_params since it
 is a formatting/truncation constant, not a decision threshold."""
 
@@ -119,7 +119,7 @@ class AgentState(TypedDict, total=False):
 
 def _data_sensitivity(value: Optional[str]) -> DataSensitivity:
     """Fails closed, matching every other consumer of this flag in the
-    system (CLAUDE.md section 11): unrecognized or missing is real."""
+    system (SPEC.md section 11): unrecognized or missing is real."""
     return DataSensitivity.SYNTHETIC if value == "synthetic" else DataSensitivity.REAL
 
 
@@ -128,7 +128,7 @@ def _normalize_product_name(name: str) -> str:
 
 
 def _is_self_match(candidate_name: str, self_match_terms: List[str]) -> bool:
-    """Deterministic, never trusted to the model alone -- CLAUDE.md
+    """Deterministic, never trusted to the model alone -- SPEC.md
     section 8's explicit requirement: "The client's own product
     colliding with a generic search term and surfacing as its own
     'competitor' -> explicit self-match filter required." A candidate
@@ -340,7 +340,7 @@ def assess_node(state: AgentState) -> Dict[str, Any]:
     if not results:
         # A legitimate empty result set (tools.search returned []), not
         # a failure (that would already have set stop_reason above) --
-        # CLAUDE.md section 8's most honest stop condition.
+        # SPEC.md section 8's most honest stop condition.
         return {
             "last_new_count": 0,
             "stop_reason": STOP_DIMINISHING_RETURNS,
@@ -378,7 +378,7 @@ def assess_node(state: AgentState) -> Dict[str, Any]:
     updated_known = {**known_products, **new_products}
     new_count = len(new_products)
 
-    # Order matters: budget_cap is checked last, on purpose. CLAUDE.md
+    # Order matters: budget_cap is checked last, on purpose. SPEC.md
     # section 8 says it "only overrides the model's judgment when
     # continuing would blow the cost/time budget" -- if the model
     # already judged sufficiency (or diminishing returns already showed
@@ -420,7 +420,7 @@ def _route_after_assess(state: AgentState) -> str:
 def conclude_node(state: AgentState) -> Dict[str, Any]:
     """Always reached, regardless of stop reason -- the deterministic
     finalization step. no_viable_alternative_found is a confident,
-    legitimate finding (CLAUDE.md section 8) when it coincides with
+    legitimate finding (SPEC.md section 8) when it coincides with
     sufficiency or diminishing returns, distinct from zero products
     after a STOP_FAILURE, which means the search never completed, not
     that none exist."""
@@ -474,7 +474,7 @@ def initial_state(segment: Dict[str, Any], *, run_id: str, data_sensitivity: str
 
 def run_config(run_id: str, segment_id: str) -> Dict[str, Any]:
     """One segment's research == one checkpointer thread, independent of
-    every other segment's -- CLAUDE.md section 8: "checkpointed
+    every other segment's -- SPEC.md section 8: "checkpointed
     independently so one branch's failure doesn't take down the
     others"."""
     return {"configurable": {"thread_id": f"{run_id}:{segment_id}"}, "recursion_limit": 50}

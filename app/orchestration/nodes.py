@@ -20,7 +20,7 @@ this graph in its own ancestry to wire them into. ``detect_cost_outliers``
 and ``explain_cost_outliers`` joined them in feat/cost-outlier-detection
 (branch 11). ``build_market_segments`` and ``research_segment`` joined
 them in feat/market-intelligence-agent (branch 12) -- the only genuine
-agent in this system (CLAUDE.md section 3): a real LangGraph loop
+agent in this system (SPEC.md section 3): a real LangGraph loop
 (app.market_intelligence.graph), not a single call or a bounded ensemble
 like every other LLM-backed stage here. ``extract_and_ground_products``
 joined them in feat/product-extraction-grounding (branch 13): a single
@@ -28,7 +28,7 @@ structured call over the agent's kept search evidence, plus a
 deterministic claim-level grounding check. ``generate_narratives`` joins
 them now, in feat/narrative-generation (branch 14): one structured call
 per application with a fixed one-retry budget and a deterministic
-structured-bullet fallback (CLAUDE.md section 5). ``render_report`` joins
+structured-bullet fallback (SPEC.md section 5). ``render_report`` joins
 them last, in feat/report-rendering-consolidation (branch 15): a
 deterministic assemble-then-render pass (app.reporting) that is the one
 rendering path, replacing the divergent legacy renderers. LANDED_BY
@@ -38,7 +38,7 @@ pending one, so the stage log always says which is which.
 Fan-out workers (``classify_disclosure``, ``score_row``,
 ``adjudicate_cluster``, ``research_segment``) never raise past their own
 branch: a failure is recorded in ``branch_failures`` for that subject and
-the remaining branches finish normally (CLAUDE.md section 8). Each
+the remaining branches finish normally (SPEC.md section 8). Each
 delegates its body to a ``_stage_*`` function purely so that isolation
 is testable by substituting one. ``calibrate_rubrics``, ``apply_scoring_
 kernel``, ``block_capabilities``, ``build_profiles``,
@@ -117,7 +117,7 @@ def _failure(kind: str, subject_id: str, error: BaseException) -> Dict[str, Any]
 
 def _data_sensitivity(source: Dict[str, Any]) -> DataSensitivity:
     """Fails closed: an unrecognized or missing flag is treated as real
-    client data, matching graph.initial_state's default (CLAUDE.md
+    client data, matching graph.initial_state's default (SPEC.md
     section 11) -- a run can only reach Gemini by explicitly declaring
     itself synthetic, never by a blank or malformed flag. `source` is
     GraphState for a linear node or a *Task dict for a fanned-out
@@ -135,7 +135,7 @@ def ingest(state: GraphState) -> Dict[str, Any]:
     through unchanged -- this is how tests and any future caller that
     already holds rows (e.g. branch 16's async submit endpoint, once it
     exists) skip the file entirely. Otherwise, load `dataset_path`
-    through the real deterministic loader (CLAUDE.md section 5):
+    through the real deterministic loader (SPEC.md section 5):
     ExcelLoader, duplicate-Application-ID surfacing, and safe cost/count
     parsing (app.ingestion.row_mapping) that treats a non-numeric cost
     cell as unparsed rather than crashing the batch (section 4 bug 6).
@@ -174,7 +174,7 @@ def ingest(state: GraphState) -> Dict[str, Any]:
 
 
 def calibrate_rubrics(state: GraphState) -> Dict[str, Any]:
-    """CLAUDE.md section 5/7: single structured LLM call, once per field
+    """SPEC.md section 5/7: single structured LLM call, once per field
     per engagement, over disclosure-gated applications (section 6) so a
     withheld/unknown/placeholder value can never become a rubric anchor.
     Proposed here; frozen to "signed_off" or "rejected" by gate 1
@@ -207,7 +207,7 @@ def _qualitative_label(field_scores: Dict[str, Any], field: str) -> Optional[str
 
 
 def apply_scoring_kernel(state: GraphState) -> Dict[str, Any]:
-    """Deterministic TIM-E / COTS-fit scoring (CLAUDE.md section 5).
+    """Deterministic TIM-E / COTS-fit scoring (SPEC.md section 5).
     app/scoring/kernel.py is the landed implementation (branch 3); this
     is where it is actually called, now that calibrated qualitative
     labels exist to feed it (branch 8). Every qualitative axis comes
@@ -252,7 +252,7 @@ def apply_scoring_kernel(state: GraphState) -> Dict[str, Any]:
             other_costs=gated.get("other_costs"),
             # market_product_count: no retrieval exists before branch 12;
             # 0 is the same "no market evidence yet" default the batch
-            # path used before this kernel existed (CLAUDE.md section 8).
+            # path used before this kernel existed (SPEC.md section 8).
             market_product_count=0,
         )
         scoring_result = kernel.score_application(inputs)
@@ -349,7 +349,7 @@ def explain_cost_outliers(state: GraphState) -> Dict[str, Any]:
     """Single LLM call per flagged outlier
     (app.cost_intelligence.explainability, branch 11), judging only
     whether the flag is explainable -- it never decides the flag itself.
-    Linear, not fanned out (CLAUDE.md section 5's table entry for this
+    Linear, not fanned out (SPEC.md section 5's table entry for this
     stage is a single explain call, not an ensemble; the graph's own
     topology never Sends this stage), so a portfolio with several flagged
     outliers makes its calls here sequentially, one node execution.
@@ -395,7 +395,7 @@ def explain_cost_outliers(state: GraphState) -> Dict[str, Any]:
 def build_market_segments(state: GraphState) -> Dict[str, Any]:
     """Deterministic (app.market_intelligence.segments, branch 12): turns
     the redundancy verdicts' typologies into the segments the market
-    intelligence agent actually fans out over -- CLAUDE.md section 8's
+    intelligence agent actually fans out over -- SPEC.md section 8's
     "once per redundancy-surviving segment," derived here so the agent
     itself never has to reason about typology cardinality. A new linear
     node ahead of the market fan-out, not folded into
@@ -418,7 +418,7 @@ def extract_and_ground_products(state: GraphState) -> Dict[str, Any]:
     (app.market_intelligence.extraction, branch 13), plus a
     deterministic claim-level grounding check against the search text the
     market agent kept -- every individual claim, not just the product
-    name (CLAUDE.md section 5). Linear, not fanned out: the market
+    name (SPEC.md section 5). Linear, not fanned out: the market
     fan-out has already joined by here, and each segment's extraction
     stands on its own finding. A provider failure yields an empty
     grounded list for that segment (never an ungrounded one), recorded
@@ -435,7 +435,7 @@ def generate_narratives(state: GraphState) -> Dict[str, Any]:
     """One structured narrative call per scored application
     (app.narrative.generator, branch 14), with a fixed one-retry budget
     and a deterministic structured-bullet fallback -- the stopping rule
-    is in code, never model judgment (CLAUDE.md section 5), which is why
+    is in code, never model judgment (SPEC.md section 5), which is why
     this is a node, not a loop. Every narrative that fell back to bullets
     (failed grounding within the attempt budget, or the call itself
     failed twice) enqueues its own gate 5 item: the report is not final
@@ -473,12 +473,12 @@ def generate_narratives(state: GraphState) -> Dict[str, Any]:
 
 def render_report(state: GraphState) -> Dict[str, Any]:
     """Deterministic assemble-then-render (app.reporting, branch 15) --
-    the one rendering path (CLAUDE.md section 5). report_service builds
+    the one rendering path (SPEC.md section 5). report_service builds
     the structured report dict from the finished run state;
     report_renderer turns it into Markdown, carried alongside the dict
     under state["report"]["markdown"].
 
-    This stage also applies the shadow-mode delivery gate (CLAUDE.md
+    This stage also applies the shadow-mode delivery gate (SPEC.md
     section 2): it stamps report["delivery"] with whether the report may
     reach the client, and -- for a shadow run -- records the completed
     run in the engagement ledger (idempotent by run id) so a later
@@ -501,7 +501,7 @@ def render_report(state: GraphState) -> Dict[str, Any]:
 
 
 def _stage_disclosure(task: RowTask) -> Dict[str, Any]:
-    """CLAUDE.md section 6. Single structured LLM call per row
+    """SPEC.md section 6. Single structured LLM call per row
     (app/disclosure/classifier.py), gating every field it classifies out
     of downstream scoring unless the client actually answered it."""
     application = task.get("application") or {}
@@ -519,7 +519,7 @@ def _stage_disclosure(task: RowTask) -> Dict[str, Any]:
 
 
 def _stage_qualitative(task: RowTask) -> Dict[str, Any]:
-    """CLAUDE.md section 7. `task["application"]` is already the
+    """SPEC.md section 7. `task["application"]` is already the
     disclosure-gated dict (graph._fan_out_qualitative), never the raw
     one -- app.qualitative_scoring.scorer never sees a withheld value."""
     application = task.get("application") or {}
@@ -534,7 +534,7 @@ def _stage_qualitative(task: RowTask) -> Dict[str, Any]:
 
 
 def _stage_adjudication(task: ClusterTask) -> Dict[str, Any]:
-    """CLAUDE.md sections 9 and 10: every pair within this cluster is
+    """SPEC.md sections 9 and 10: every pair within this cluster is
     adjudicated (app.redundancy.adjudicator, an ensemble, not an agent),
     then the deterministic recommendation policy
     (app.redundancy.recommendation_policy) is applied to each verdict
@@ -584,7 +584,7 @@ def _stage_adjudication(task: ClusterTask) -> Dict[str, Any]:
 
 
 def _stage_market_research(task: SegmentTask) -> Dict[str, Any]:
-    """CLAUDE.md sections 3, 5, 8: the only genuine agent in this
+    """SPEC.md sections 3, 5, 8: the only genuine agent in this
     system. Builds and invokes app.market_intelligence.graph's compiled
     subgraph for this one segment, checkpointed on its own thread
     (f"{run_id}:{segment_id}") independently of every other segment's
@@ -662,7 +662,7 @@ def score_row(task: RowTask) -> Dict[str, Any]:
 
 def adjudicate_cluster(task: ClusterTask) -> Dict[str, Any]:
     """One fanned-out branch per candidate cluster -- possibly several
-    pairwise verdicts per cluster (O(k^2) within a cluster, CLAUDE.md
+    pairwise verdicts per cluster (O(k^2) within a cluster, SPEC.md
     section 9's accepted scaling cost). 3-sample ensemble into the
     five-way typology per pair -- an ensemble, not an agent. Gate 3
     review items are enqueued per pair, not per cluster."""

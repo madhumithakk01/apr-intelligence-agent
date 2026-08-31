@@ -1,4 +1,4 @@
-"""HTTP layer for the bid-outcome data purge -- CLAUDE.md section 2.
+"""HTTP layer for the bid-outcome data purge -- SPEC.md section 2.
 
   POST /api/retention/purge          clear every client-data store
   GET  /api/retention/purge/history  recent purge audit records

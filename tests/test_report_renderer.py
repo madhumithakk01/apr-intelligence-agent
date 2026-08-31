@@ -1,4 +1,4 @@
-"""Report rendering -- CLAUDE.md sections 5, 13.
+"""Report rendering -- SPEC.md sections 5, 13.
 
 Deterministic string output; no mocks.
 """

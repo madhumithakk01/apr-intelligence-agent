@@ -1,15 +1,15 @@
-"""Search tool for the market intelligence agent -- CLAUDE.md section 8.
+"""Search tool for the market intelligence agent -- SPEC.md section 8.
 
 A thin wrapper over Tavily, in the same spirit as app.llm.providers: one
 function every caller goes through, so the branch that actually gets
 retried/mocked/swapped has exactly one place to be correct. Fully
 replaces app.services.market_service's ~20-vendor regex whitelist
-(CLAUDE.md section 4 bug 8) -- that approach structurally cannot
+(SPEC.md section 4 bug 8) -- that approach structurally cannot
 discover a vendor it wasn't hardcoded to recognize, which is the whole
 reason this branch exists.
 
 Search results are not gated by DataSensitivity the way an LLM call is
-(CLAUDE.md section 11): that rule is specifically about client data
+(SPEC.md section 11): that rule is specifically about client data
 reaching a model provider's training pipeline (Google's free tier for
 Gemini), and Tavily is a search API the caller queries, not a provider
 client data is handed to for processing. What still matters is what
@@ -56,7 +56,7 @@ def search(
 ) -> Optional[List[SearchResult]]:
     """None on failure -- no API key configured, a network error, a rate
     limit, an unexpected response shape; a (possibly empty) list on
-    success. This distinction is load-bearing, not incidental: CLAUDE.md
+    success. This distinction is load-bearing, not incidental: SPEC.md
     section 8 keeps "failure/checkpoint" (an infra problem, resume the
     branch) and "diminishing returns" (a genuinely empty or exhausted
     result set, a confident conclusion) as two different stop

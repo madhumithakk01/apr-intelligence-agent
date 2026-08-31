@@ -1,12 +1,12 @@
 """One raw Excel row -> one ApplicationInput-shaped dict.
 
 Single source of truth for the raw-column -> canonical-field mapping
-(CLAUDE.md section 1: no invented second copy). Before this module
+(SPEC.md section 1: no invented second copy). Before this module
 existed, import_dataset.py hand-built this mapping inline as kwargs to
 the `Application` ORM model; app/orchestration/nodes.ingest needs the
 identical mapping to build application dicts for the graph, which is
 what this extraction is for. Both callers get the same safe cost
-parsing (CLAUDE.md section 4 bug 6: never crash, never silently coerce
+parsing (SPEC.md section 4 bug 6: never crash, never silently coerce
 a withheld cost to zero) and the same collision-surfacing contract from
 whichever caller drives ExcelLoader.
 """
