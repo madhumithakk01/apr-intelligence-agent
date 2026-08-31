@@ -1,4 +1,4 @@
-"""Product extraction and claim-level grounding -- CLAUDE.md sections 5, 13.
+"""Product extraction and claim-level grounding -- SPEC.md sections 5, 13.
 
 Never touches a real provider: every test mocks
 app.market_intelligence.extraction.get_completion, matching the pattern

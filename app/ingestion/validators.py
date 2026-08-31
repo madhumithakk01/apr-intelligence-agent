@@ -1,6 +1,6 @@
 import re
 
-# Known deliberate-withholding phrasing (CLAUDE.md section 2: "Confidential" /
+# Known deliberate-withholding phrasing (SPEC.md section 2: "Confidential" /
 # "cannot say" / "cannot disclose" is a business decision, not a data-quality
 # defect -- never imputed, defaulted, or sent to an LLM to guess a value).
 #

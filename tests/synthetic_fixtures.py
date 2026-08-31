@@ -1,6 +1,6 @@
 """Synthetic fixtures for orchestration tests.
 
-Invented rows, not client data, and not a sample of it -- CLAUDE.md
+Invented rows, not client data, and not a sample of it -- SPEC.md
 section 2 permits real client data nowhere near a test fixture, and
 section 11 permits it nowhere near Gemini. Values here are deliberately
 implausible as a real portfolio (three apps, obviously fake vendors) so
@@ -47,7 +47,7 @@ SYNTHETIC_CLUSTERS: List[Dict[str, Any]] = [
 
 SYNTHETIC_SEGMENTS: List[Dict[str, Any]] = [
     # Two segments from one cluster: the Scale-Tiered Overlap case from
-    # CLAUDE.md section 8, where each tier is a separately-framed
+    # SPEC.md section 8, where each tier is a separately-framed
     # research target rather than one query for the pair.
     {"segment_id": "SEG-CLAIMS-HEAVY", "cluster_id": "CL-CLAIMS", "tier": "enterprise"},
     {"segment_id": "SEG-CLAIMS-LIGHT", "cluster_id": "CL-CLAIMS", "tier": "lightweight"},

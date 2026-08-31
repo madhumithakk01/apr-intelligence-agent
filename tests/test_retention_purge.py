@@ -1,4 +1,4 @@
-"""Bid-outcome data purge -- CLAUDE.md section 2.
+"""Bid-outcome data purge -- SPEC.md section 2.
 
 One entry point clears every client-data store on the bid-outcome
 trigger. Tests run against a PurgePaths rooted at tmp_path, so nothing

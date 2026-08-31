@@ -1,4 +1,4 @@
-"""Qualitative Row Scoring -- CLAUDE.md sections 4, 5, 7, 10, 12.
+"""Qualitative Row Scoring -- SPEC.md sections 4, 5, 7, 10, 12.
 
 The replacement for section 4 bug 1's silent default-3: turns each row's
 free-text qualitative values into the canonical labels
@@ -35,7 +35,7 @@ Technique per section 5's table: single call by default, escalating to a
      <= QUALITATIVE_ENSEMBLE_DISAGREEMENT["auto_accept_max_range"] ->
      median, high confidence, no review. Range >=
      ["mandatory_review_min_range"] -> median, low confidence, gate 2
-     (CLAUDE.md section 10) review. Fewer than QUALITATIVE_ENSEMBLE_SIZE
+     (SPEC.md section 10) review. Fewer than QUALITATIVE_ENSEMBLE_SIZE
      valid samples (a call failed or returned nothing usable) never
      produces a resolution from a partial ensemble -- scoring_failed
      instead, exactly like every other failure path in this system: fail

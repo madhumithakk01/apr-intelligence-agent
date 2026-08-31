@@ -7,7 +7,7 @@ that way. Nothing derived from the client file is committed or pushed --
 not the rows, not de-identified rows, not the snapshots taken from them.
 CI never sees this fixture; it exists so that whoever holds the workbook
 can run the same regression suite against real values, and so that the
-CLAUDE.md section 12 weights and thresholds can be validated against
+SPEC.md section 12 weights and thresholds can be validated against
 data that was not invented by the person validating them.
 
 The de-identification below is therefore not what makes the output safe
@@ -117,7 +117,7 @@ _STACK_SPLIT_RE_PARTS = [",", "/", ";", " and "]
 def _cell(value: Any) -> Any:
     """Preserve the cell as written. Non-numeric cost text ("cannot
     disclose") is carried through as a string on purpose -- it is a
-    business decision, not a defect (CLAUDE.md section 2)."""
+    business decision, not a defect (SPEC.md section 2)."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
     if isinstance(value, (int, float)):

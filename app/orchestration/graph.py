@@ -1,4 +1,4 @@
-"""Top-level orchestration StateGraph -- CLAUDE.md sections 5, 10, 13.
+"""Top-level orchestration StateGraph -- SPEC.md sections 5, 10, 13.
 
 The pipeline's control flow, and only its control flow: stage order,
 four ``Send`` fan-outs, the five ``interrupt()`` gates, and a
@@ -10,7 +10,7 @@ real since feat/disclosure-classifier (branch 6).
 Building the topology before any stage exists is deliberate. This is a
 portfolio-scale batch pipeline whose stages are individually cheap to
 test and collectively expensive to re-wire, and a 100-row run is rate-
-limited enough (CLAUDE.md section 11) that discovering a topology defect
+limited enough (SPEC.md section 11) that discovering a topology defect
 during a real run costs an afternoon. Everything downstream plugs into
 this graph, so it gets its own branch and its own tests.
 
@@ -63,7 +63,7 @@ def _fan_out_disclosure(state: GraphState) -> Union[str, List[Send]]:
 
 def _fan_out_qualitative(state: GraphState) -> Union[str, List[Send]]:
     """One branch per row that has a disclosure result -- score_row must
-    only ever see the disclosure-gated application dict (CLAUDE.md
+    only ever see the disclosure-gated application dict (SPEC.md
     section 2: a withheld field is never scored), never the raw one. A
     row whose disclosure branch failed has no gated_application to give
     it and is simply excluded, the same way apply_scoring_kernel's own
@@ -207,11 +207,11 @@ def initial_state(
     """Default run input. ``data_sensitivity`` defaults to "real" so an
     omitted flag fails closed -- the strict provider routing (Groq only,
     never Gemini) applies unless a caller deliberately declares synthetic
-    fixtures (CLAUDE.md section 11). ``run_mode`` defaults to "shadow"
+    fixtures (SPEC.md section 11). ``run_mode`` defaults to "shadow"
     for the same reason: a run is internal-review-only unless a caller
     deliberately asks for "live", and even then its report is not
     client-deliverable until a shadow run has been signed off
-    (app.orchestration.shadow, CLAUDE.md section 2)."""
+    (app.orchestration.shadow, SPEC.md section 2)."""
     return GraphState(
         run_id=run_id,
         data_sensitivity=data_sensitivity,

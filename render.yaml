@@ -1,4 +1,4 @@
-# Render deployment blueprint -- CLAUDE.md section 15 (Host: Render free
+# Render deployment blueprint -- SPEC.md section 15 (Host: Render free
 # tier). One Docker web service.
 #
 # SQLite -- both the application DB (app/database/db.py) and the

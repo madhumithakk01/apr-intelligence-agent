@@ -1,4 +1,4 @@
-"""The five human-in-the-loop gates -- CLAUDE.md section 10.
+"""The five human-in-the-loop gates -- SPEC.md section 10.
 
 All five are real ``interrupt()`` calls on this branch; what is stubbed
 is the evidence that reaches them, because every upstream stage is a
@@ -8,7 +8,7 @@ resume it with a reviewer decision -- is built and tested now against
 synthetic fixtures, while no gate invents a reason to fire.
 
 All review is internal to our own firm. Nothing a gate surfaces routes
-back to the client during Phase 1 (CLAUDE.md section 2).
+back to the client during Phase 1 (SPEC.md section 2).
 
 Gate 1 fires once per engagement and blocks unconditionally until a
 reviewer signs the rubrics off. Gates 2-5 are queue-driven: they fire
@@ -80,7 +80,7 @@ def _queue_driven_gate(state: GraphState, gate: str) -> Dict[str, Any]:
 
 
 def _is_signoff_approved(decision: Any) -> bool:
-    """Fail closed (CLAUDE.md section 2's spirit, applied to a human
+    """Fail closed (SPEC.md section 2's spirit, applied to a human
     decision): only a recognized approval shape counts as signed off.
     An explicit rejection, or a resume payload this gate simply doesn't
     recognize, is treated as NOT approved -- never assumed. This does
@@ -129,7 +129,7 @@ def gate_rubric_signoff(state: GraphState) -> Dict[str, Any]:
 
 def gate_qualitative_disagreement(state: GraphState) -> Dict[str, Any]:
     """Gate 2. Fires on the rows whose ensemble range was >= 2 points
-    (CLAUDE.md section 7) -- one stop for the whole batch of them, not
+    (SPEC.md section 7) -- one stop for the whole batch of them, not
     one stop per row, since the fan-out has already joined here."""
     return _queue_driven_gate(state, GATE_QUALITATIVE_DISAGREEMENT)
 

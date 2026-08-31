@@ -1,4 +1,4 @@
-"""Market intelligence search tool -- CLAUDE.md section 8.
+"""Market intelligence search tool -- SPEC.md section 8.
 
 Never touches a real network call: every test either mocks
 app.market_intelligence.tools.TavilyClient or clears TAVILY_API_KEY.

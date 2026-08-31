@@ -204,7 +204,7 @@ def _numeric_65_or_70_literal_lines(path: Path):
 
 
 def test_no_second_cots_threshold_in_source():
-    """CLAUDE.md section 4 bug 3: one canonical COTS threshold, read
+    """SPEC.md section 4 bug 3: one canonical COTS threshold, read
     from governance_params. The two former scoring engines that held the
     conflicting 65-vs-70 literals (agent_service.py, analysis_service.py)
     were deleted once the async pipeline replaced them, so kernel.py is
@@ -239,7 +239,7 @@ def test_all_cost_missing_has_none_total():
     assert cost.is_complete is False
 
 
-def test_governance_params_values_match_claude_md():
+def test_governance_params_values_match_spec():
     assert gp.TIME_WEIGHTS == {"value": 0.45, "health": 0.35, "consolidation": 0.20}
     assert gp.DECISION_THRESHOLDS == {"invest": 80, "migrate": 60, "tolerate": 40}
     assert gp.COTS_REPLACE_THRESHOLD == 65
@@ -248,7 +248,7 @@ def test_governance_params_values_match_claude_md():
     assert gp.MARKET_AGENT_ITERATION_CAP == 4
     assert gp.MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER == 5
     # QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD: set by feat/qualitative-scoring
-    # (branch 8), not itemized in CLAUDE.md section 12's table as a fixed value --
+    # (branch 8), not itemized in SPEC.md section 12's table as a fixed value --
     # see tests/test_qualitative_scoring.py for its own governance-params coverage.
 
 

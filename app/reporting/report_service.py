@@ -1,4 +1,4 @@
-"""Report assembly -- CLAUDE.md sections 5, 13.
+"""Report assembly -- SPEC.md sections 5, 13.
 
 Deterministic. Takes the finished run state and produces one structured
 ``report`` dict: a portfolio-level summary, one entry per scored
@@ -8,7 +8,7 @@ ingestion collisions, failed branches, and which human gates fired.
 This is the assembly half of the report stage; app.reporting.report_
 renderer turns the dict this returns into Markdown. They live in one
 package and share one shape so there is a single rendering path -- the
-consolidation CLAUDE.md section 5 calls for. The pre-existing
+consolidation SPEC.md section 5 calls for. The pre-existing
 app/services/report_{service,renderer}.py belong to the legacy
 single-record API/CLI path and are removed once that path is migrated
 off the legacy scoring services (not this branch's scope).
@@ -31,13 +31,13 @@ _TIME_DECISION_ORDER = ("Invest", "Migrate", "Tolerate", "Eliminate")
 def _unevaluated_delivery(run_mode: str) -> Dict[str, Any]:
     """Fail-safe stamp when build_report is called without a delivery
     verdict (render_report always supplies one; this covers direct
-    callers and tests). Never client-deliverable -- CLAUDE.md section 2."""
+    callers and tests). Never client-deliverable -- SPEC.md section 2."""
     return {
         "run_mode": run_mode,
         "client_deliverable": False,
         "shadow_signoff_on_record": False,
         "reason": "Delivery gate not evaluated for this report -- treated as not client-deliverable "
-                  "(CLAUDE.md section 2).",
+                  "(SPEC.md section 2).",
     }
 
 
@@ -174,7 +174,7 @@ def build_report(state: GraphState, *, delivery: Optional[Dict[str, Any]] = None
     ``delivery`` is the shadow-mode verdict
     (app.orchestration.shadow.ShadowLedger.delivery_status) the
     render_report node computes; when omitted the report is stamped
-    not-client-deliverable (CLAUDE.md section 2)."""
+    not-client-deliverable (SPEC.md section 2)."""
     kernel_results = state.get("kernel_results") or {}
     narratives = state.get("narratives") or {}
     verdicts = state.get("verdicts") or []

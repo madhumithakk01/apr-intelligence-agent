@@ -1,4 +1,4 @@
-"""Segment construction -- CLAUDE.md sections 8, 9. Purely deterministic."""
+"""Segment construction -- SPEC.md sections 8, 9. Purely deterministic."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def test_scale_tiered_overlap_produces_two_differently_framed_segments():
     assert len(result) == 2
     assert by_id["A"].framing == seg.TIER_ENTERPRISE
     assert by_id["B"].framing == seg.TIER_LIGHT
-    assert by_id["A"].seed_query != by_id["B"].seed_query  # differently framed, per CLAUDE.md section 8
+    assert by_id["A"].seed_query != by_id["B"].seed_query  # differently framed, per SPEC.md section 8
 
 
 # --- Partial/Component Overlap: two segments, neutral framing --------------

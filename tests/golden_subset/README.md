@@ -1,6 +1,6 @@
 # Golden subset
 
-The regression gate that runs on every PR (CLAUDE.md sections 13 and 15).
+The regression gate that runs on every PR (SPEC.md sections 13 and 15).
 
 It has two halves, and the split is a confidentiality requirement rather
 than a convenience: **nothing derived from the client workbook is ever
@@ -23,13 +23,13 @@ the scoring paths, and they are built to cover:
 - all four TIME bands (Invest / Migrate / Tolerate / Eliminate) plus
   `Insufficient Data`
 - the skill-availability floor — a row whose raw decision is `Invest`
-  and whose final decision is forced to `Migrate` (CLAUDE.md §4.5)
+  and whose final decision is forced to `Migrate` (SPEC.md §4.5)
 - both sides of the COTS replace threshold (§12), via a fixture-only
   `Market Product Count` column standing in for branch 12's retrieval
 - withheld cost cells (`"cannot disclose"`) and withheld qualitative
   cells (`"cannot say"`), so the never-default rule stays covered
 - free-text qualitative values that match none of the five labels the
-  deterministic kernel knows — CLAUDE.md §4.1, the bug that used to
+  deterministic kernel knows — SPEC.md §4.1, the bug that used to
   silently default to 3
 - a capability-sharing trio on one L3, so the redundancy stages
   (branches 9–10) have something to cluster
@@ -47,7 +47,7 @@ right, so agreement proves nothing. Every run says so in a warning.
 `build_local_subset.py` reads the client workbook and writes
 `local/rows.json` + `local/labels.json`, which are gitignored. When
 present, the whole suite runs over them too — same invariants, real
-values. This is where CLAUDE.md §12's empirical validation of the
+values. This is where SPEC.md §12's empirical validation of the
 weights and thresholds has to happen, and its verdict travels back as an
 analyst label, never as data.
 

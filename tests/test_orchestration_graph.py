@@ -4,7 +4,7 @@ This suite is about control flow, not what any one stage computes --
 that is what each stage's own test module covers (disclosure
 classification: tests/test_disclosure_classifier.py). Concretely:
 
-  * every pipeline stage in CLAUDE.md section 5 is a node, in order
+  * every pipeline stage in SPEC.md section 5 is a node, in order
   * a run suspends at a gate and resumes from the checkpointer alone --
     including through a freshly compiled graph and a reopened SQLite
     file, which is what proves the state lives in the checkpoint rather
@@ -284,7 +284,7 @@ def test_fan_out_produces_one_branch_per_subject():
 
 
 def test_market_fan_out_is_per_segment_not_per_application():
-    """CLAUDE.md section 8: a Scale-Tiered Overlap produces two
+    """SPEC.md section 8: a Scale-Tiered Overlap produces two
     differently-framed research targets from one cluster, so the market
     fan-out must key off segments, not rows or clusters."""
     graph = build_graph(build_in_memory_checkpointer())
@@ -429,7 +429,7 @@ def test_each_queue_driven_gate_fires_on_its_own_review_items(gate):
 def test_review_items_enqueued_by_a_fanned_out_branch_reach_their_gate(monkeypatch):
     """The realistic path: a worker branch decides mid-run that one of
     its fields needs review (score_row's real needs_review contract,
-    CLAUDE.md section 7), and the gate downstream of the join picks it
+    SPEC.md section 7), and the gate downstream of the join picks it
     up."""
 
     def flag_ambiguous_row(task):
@@ -565,7 +565,7 @@ def test_resumed_run_does_not_rerun_completed_stages():
 def test_one_failing_branch_does_not_take_down_its_siblings(
     monkeypatch, stage_attr, kind, failing_subject, surviving_key
 ):
-    """CLAUDE.md section 8: branches are checkpointed independently so
+    """SPEC.md section 8: branches are checkpointed independently so
     one branch's failure never fails the batch. The failure is recorded
     against its own subject and the run still completes."""
 
@@ -1221,7 +1221,7 @@ def test_explain_cost_outliers_delegates_to_the_real_module_and_wires_gate_4(mon
 def test_run_input_defaults_to_real_data_sensitivity():
     """Fails closed: an omitted flag is treated as real client data, so
     the Gemini fallback stays unavailable unless a caller declares
-    synthetic fixtures (CLAUDE.md section 11)."""
+    synthetic fixtures (SPEC.md section 11)."""
     assert initial_state("run-x")["data_sensitivity"] == "real"
 
 

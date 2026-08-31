@@ -1,4 +1,4 @@
-"""Disclosure & Provenance Classification -- CLAUDE.md sections 2, 6, 11.
+"""Disclosure & Provenance Classification -- SPEC.md sections 2, 6, 11.
 
 Never touches a real provider: every test mocks
 app.disclosure.classifier.get_completion, matching the pattern already
@@ -148,7 +148,7 @@ def test_all_non_blank_classifiable_fields_are_batched_into_one_call(monkeypatch
 
 
 def test_client_field_values_never_reach_the_instructions_text(monkeypatch):
-    """CLAUDE.md section 2: client-supplied free text is untrusted
+    """SPEC.md section 2: client-supplied free text is untrusted
     content, always delimited as data, never concatenated into the
     trusted instructions string."""
     calls = _make_llm_mock(
@@ -462,7 +462,7 @@ def test_every_non_answered_category_has_a_distinct_interview_prompt(category):
 
 
 def test_classifiable_fields_are_exactly_the_axes_the_kernel_and_cost_stages_read():
-    """CLAUDE.md section 6: gates every downstream scoring step for that
+    """SPEC.md section 6: gates every downstream scoring step for that
     field. Capability tags are the redundancy blocking key and are
     deliberately excluded (section 9: rarely withheld, block generously)."""
     assert set(classifier.CLASSIFIABLE_FIELDS) == {

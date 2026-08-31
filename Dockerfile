@@ -1,4 +1,4 @@
-# APR Intelligence Agent -- CLAUDE.md section 15.
+# APR Intelligence Agent -- SPEC.md section 15.
 # Single stage, python:3.12-slim, uvicorn entrypoint. The pipeline is
 # I/O-bound (rate-limited LLM and search calls), so one worker suits the
 # Render free tier; raise WEB_CONCURRENCY when it moves off it.

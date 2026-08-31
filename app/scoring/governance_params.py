@@ -1,9 +1,9 @@
-"""Governance parameters -- CLAUDE.md section 12.
+"""Governance parameters -- SPEC.md section 12.
 
 Single source of truth for every tunable numeric parameter in the
 scoring/redundancy/market/cost pipelines. No consumer anywhere in this
 codebase should hardcode one of these values locally -- import it from
-here. Values already decided are transcribed verbatim from CLAUDE.md;
+here. Values already decided are transcribed verbatim from SPEC.md;
 this module does not invent, tune, or validate any of them. Parameters
 not yet consumed by any branch are included so future branches have
 exactly one place to look before hardcoding locally -- see each
@@ -27,7 +27,7 @@ produce."""
 
 COTS_REPLACE_THRESHOLD = 65
 """Canonical COTS-fit score (0-100) at/above which the recommendation
-is "Replace with COTS". Single source of truth -- resolves CLAUDE.md
+is "Replace with COTS". Single source of truth -- resolves SPEC.md
 section 4 bug 3 (the old 65-vs-70 inconsistency between the two former
 scoring engines). Same pending-validation status as TIME_WEIGHTS."""
 
@@ -36,7 +36,7 @@ COTS_FIT_WEIGHTS = {
     "maintainability": 0.3,
     "application_stability": 0.2,
 }
-"""Not itemized in CLAUDE.md section 12's table; carried over unchanged
+"""Not itemized in SPEC.md section 12's table; carried over unchanged
 from the pre-consolidation engines and centralized here per this
 module's general mandate (section 1: every numeric parameter must be
 documented, not invented). No rationale beyond "matches the prior
@@ -52,14 +52,14 @@ Same carried-over, undocumented-rationale status as COTS_FIT_WEIGHTS."""
 # --- Consumed by redundancy/adjudicator.py (branch 10) ---
 
 REDUNDANCY_ENSEMBLE_SIZE = 3
-"""Fixed (CLAUDE.md section 12). Unlike qualitative scoring, redundancy
+"""Fixed (SPEC.md section 12). Unlike qualitative scoring, redundancy
 adjudication has no single-call-by-default / escalate-on-low-confidence
 path -- every pairwise comparison that survives the deterministic
 Indeterminate-withheld-data pre-check gets the full 3-sample ensemble
-unconditionally (CLAUDE.md section 5's table entry for this stage)."""
+unconditionally (SPEC.md section 5's table entry for this stage)."""
 
 REDUNDANCY_ENSEMBLE_TEMPERATURE = 0.7
-"""Not itemized in CLAUDE.md section 12's table; same rationale as
+"""Not itemized in SPEC.md section 12's table; same rationale as
 QUALITATIVE_ENSEMBLE_TEMPERATURE (feat/qualitative-scoring, branch 8) --
 3 samples at temperature 0.0 would trivially agree every time, making
 the ensemble vote meaningless. Kept as its own constant rather than
@@ -70,7 +70,7 @@ Not yet validated against the golden subset."""
 # --- Consumed by qualitative_scoring/scorer.py (branch 8) ---
 
 QUALITATIVE_ENSEMBLE_SIZE = 3
-"""Fixed (CLAUDE.md section 12). The default single call, when a field
+"""Fixed (SPEC.md section 12). The default single call, when a field
 is escalated, counts as the first of these 3 samples -- 2 more calls are
 made to reach it, not 3 fresh ones."""
 
@@ -78,14 +78,14 @@ QUALITATIVE_ENSEMBLE_DISAGREEMENT = {
     "auto_accept_max_range": 1,
     "mandatory_review_min_range": 2,
 }
-"""Fixed (CLAUDE.md section 12). Range is measured in points on the
+"""Fixed (SPEC.md section 12). Range is measured in points on the
 kernel's 1-5 scale across the ensemble's valid samples. These two
 values are consecutive integers by design -- every possible range (0-4
 points, since the scale spans 1-5) falls into exactly one bucket, with
 no undefined gap between "auto-accept" and "mandatory review"."""
 
 QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD: float = 0.7
-"""CLAUDE.md section 7: escalate to the 3-sample ensemble when the
+"""SPEC.md section 7: escalate to the 3-sample ensemble when the
 model's own self-reported confidence (0.0-1.0) on the default single
 call falls below this. 0.7 is a reasoned default, not yet empirically
 tuned: informal consensus in LLM-confidence-calibration practice is that
@@ -98,7 +98,7 @@ treat as final, and do not lower it to reduce escalation volume without
 re-deriving it from data."""
 
 QUALITATIVE_ENSEMBLE_TEMPERATURE = 0.7
-"""Not itemized in CLAUDE.md section 12's table; the ensemble's whole
+"""Not itemized in SPEC.md section 12's table; the ensemble's whole
 point is 3 independent-ish samples to measure disagreement, which
 temperature 0.0 (used for the deterministic default call and for every
 other structured call in this codebase) cannot produce -- three
@@ -110,13 +110,13 @@ validated against the golden subset."""
 # --- Consumed by market_intelligence/graph.py (branch 12) ---
 
 MARKET_AGENT_ITERATION_CAP = 4
-"""Fixed (CLAUDE.md section 12). Safety rail, not the primary stop
-logic (CLAUDE.md section 8): the model's own sufficiency judgment and
+"""Fixed (SPEC.md section 12). Safety rail, not the primary stop
+logic (SPEC.md section 8): the model's own sufficiency judgment and
 the diminishing-returns signal are meant to end a branch's loop first;
 this only overrides them when a branch is still going at iteration 4."""
 
 MARKET_SEARCH_RESULTS_PER_QUERY = 5
-"""Not itemized in CLAUDE.md section 12's table. How many raw results
+"""Not itemized in SPEC.md section 12's table. How many raw results
 the search tool returns per query -- a retrieval-breadth knob, not a
 correctness-critical one, so no golden-subset validation is claimed for
 it; picked to keep each iteration's LLM call (which reads every result)
@@ -124,7 +124,7 @@ within a reasonable token budget against Groq's TPM limits (section
 11)."""
 
 MARKET_AGENT_TEMPERATURE = 0.2
-"""Not itemized in CLAUDE.md section 12's table. Low but not zero: the
+"""Not itemized in SPEC.md section 12's table. Low but not zero: the
 per-iteration assessment call is a judgment (is this coverage
 sufficient? is this result relevant or SEO noise?), not a fixed
 classification into a handful of known labels the way most other
@@ -138,26 +138,26 @@ voted against each other. Not yet validated against the golden subset."""
 # (branch 11) ---
 
 MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER = 5
-"""Fixed (CLAUDE.md section 12). Below this many peers with a *known*
+"""Fixed (SPEC.md section 12). Below this many peers with a *known*
 cost-per-FTE in the same capability cluster, refuse to flag a cost
 outlier rather than manufacture a signal from noise -- a peer whose cost
 is withheld does not count toward this floor, since it contributes
 nothing to the peer statistics being compared against."""
 
 COST_OUTLIER_IQR_MULTIPLIER = 1.5
-"""Not itemized in CLAUDE.md section 12's table. The interquartile-range
+"""Not itemized in SPEC.md section 12's table. The interquartile-range
 ("Tukey's fence") rule -- flag outside [Q1 - k*IQR, Q3 + k*IQR] -- rather
 than a z-score/standard-deviation rule, because IQR is robust to the
 small peer-cluster sizes this system actually has (the floor above is
 only 5) and to the outliers it is trying to detect, which would
 otherwise inflate the standard deviation a z-score depends on. 1.5 is
 the standard Tukey convention, not an invented value, but it is still
-listed here as CLAUDE.md section 12 requires -- unlike the LLM-tuned
+listed here as SPEC.md section 12 requires -- unlike the LLM-tuned
 parameters elsewhere in this module, it does not need golden-subset
 validation to justify it; the convention is external and well-established."""
 
 COST_OUTLIER_EXPLAINABILITY_CONFIDENCE_THRESHOLD = 0.7
-"""CLAUDE.md section 10: a cost outlier whose explainability check
+"""SPEC.md section 10: a cost outlier whose explainability check
 returns confidence below this goes to gate 4, regardless of whether the
 model judged it explainable or not. Same reasoned-default, pending-
 validation status as QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD -- 0.7
@@ -166,7 +166,7 @@ is a starting point, not an empirically derived value."""
 # --- Consumed by narrative/generator.py (branch 14) ---
 
 NARRATIVE_MAX_ATTEMPTS = 2
-"""CLAUDE.md section 5: narrative generation is "bounded retry-once" --
+"""SPEC.md section 5: narrative generation is "bounded retry-once" --
 one initial draft plus at most one regeneration when the deterministic
 grounding check rejects the first. The spec fixes this at 2; it lives
 here only so no consumer hardcodes the number, and it is a hard stopping
@@ -175,7 +175,7 @@ After the last attempt still fails grounding, the stage falls back to
 deterministic structured bullets and routes the item to gate 5."""
 
 NARRATIVE_RETRY_TEMPERATURE = 0.2
-"""Not itemized in CLAUDE.md section 12's table. The first narrative
+"""Not itemized in SPEC.md section 12's table. The first narrative
 draft is generated at temperature 0.0, like every other structured call
 in this codebase; a second attempt at 0.0 would reproduce the first
 almost verbatim and fail the same grounding check, so the regeneration
@@ -184,7 +184,7 @@ enough to stay a controlled retry, not a diverse-sampling ensemble.
 Not golden-subset validated."""
 
 # --- Not yet consumed by any existing branch. Transcribed now so every
-# governance number has exactly one home from the start (CLAUDE.md
+# governance number has exactly one home from the start (SPEC.md
 # section 12: "No second copy anywhere else in the codebase"). Each
 # MUST be read from here, never re-hardcoded, once its owning branch
 # lands. ---

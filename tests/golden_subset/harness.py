@@ -1,7 +1,7 @@
 """Golden-subset harness -- loading, scoring, and label bookkeeping.
 
 The golden subset regression-gates every PR from this branch onward
-(CLAUDE.md section 15). It comes in two halves, and the split is a
+(SPEC.md section 15). It comes in two halves, and the split is a
 confidentiality requirement, not a convenience:
 
   committed fixture   tests/golden_subset/rows.json -- 20 invented rows.
@@ -19,7 +19,7 @@ confidentiality requirement, not a convenience:
 The invented fixture is built to exercise the code paths, not to
 validate the parameters: it can catch a scoring regression, and it
 cannot tell you whether 0.45/0.35/0.20 is the right weighting, because
-its rows were chosen by the same person who would be checking. CLAUDE.md
+its rows were chosen by the same person who would be checking. SPEC.md
 section 12's empirical validation has to happen against the local
 fixture (or the real portfolio), and its verdict travels as a label, not
 as data -- see README.md.
@@ -47,7 +47,7 @@ LOCAL_LABELS_PATH = LOCAL_DIR / "labels.json"
 
 MIN_ROWS = 20
 MAX_ROWS = 25
-"""CLAUDE.md section 13: ~20-25 rows. Small enough to label by hand and
+"""SPEC.md section 13: ~20-25 rows. Small enough to label by hand and
 keep labeled; large enough to cover the qualitative value space."""
 
 ANALYST_LABEL_FIELDS = (
@@ -130,7 +130,7 @@ def load_local_fixture() -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
 def _numeric_or_withheld(value: Any) -> Optional[float]:
     """Deterministic only -- see the module docstring on why this does
     not call cost_parsing's LLM fallback. Non-numeric text ("cannot
-    disclose") is a withheld value, never a zero (CLAUDE.md section 2)."""
+    disclose") is a withheld value, never a zero (SPEC.md section 2)."""
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
@@ -160,7 +160,7 @@ def _aggregate(score: kernel.AggregateScore) -> Dict[str, Any]:
 
 def kernel_snapshot(row: Dict[str, Any]) -> Dict[str, Any]:
     """The row's full deterministic scoring output, including which axes
-    went unscored -- the unscored lists are the part that makes CLAUDE.md
+    went unscored -- the unscored lists are the part that makes SPEC.md
     section 4 bug 1 (free-text values silently defaulting to 3) visible
     in a diff instead of invisible behind a plausible number."""
     result = kernel.score_application(scoring_input(row))

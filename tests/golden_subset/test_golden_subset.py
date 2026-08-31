@@ -13,11 +13,11 @@ What it gates:
      skill-availability floor, both sides of the COTS threshold, and
      withheld-cost rows.
   3. No axis is ever scored from a value the kernel cannot interpret
-     (CLAUDE.md section 4 bug 1), and the classification field never
+     (SPEC.md section 4 bug 1), and the classification field never
      re-enters technical health (bug 4).
   4. Analyst labels, once filled, agree with the pipeline. Until then
      the suite says so out loud every run, rather than reporting green
-     as though CLAUDE.md section 12's weights had been validated -- and
+     as though SPEC.md section 12's weights had been validated -- and
      they cannot be validated against invented rows in any case.
 """
 
@@ -133,7 +133,7 @@ def test_fixture_covers_every_time_band():
 
 
 def test_fixture_covers_the_skill_availability_floor():
-    """CLAUDE.md section 4 bug 5: low skill availability plus fragile
+    """SPEC.md section 4 bug 5: low skill availability plus fragile
     stability forces a minimum Migrate over a high raw score."""
     floored = [
         snapshot
@@ -205,7 +205,7 @@ def test_local_fixture_matches_its_recorded_snapshots():
     ids=[row["Application ID"] for row in ROWS] + [f"local-{row['Application ID']}" for row in LOCAL_ROWS],
 )
 def test_no_axis_is_scored_from_a_value_the_kernel_cannot_interpret(row):
-    """CLAUDE.md section 4 bug 1. Every value that is not one of the five
+    """SPEC.md section 4 bug 1. Every value that is not one of the five
     labels the kernel knows must land in an unscored list -- never
     contribute a number, never a silent default of 3."""
     snapshot = harness.kernel_snapshot(row)
@@ -233,7 +233,7 @@ def test_no_axis_is_scored_from_a_value_the_kernel_cannot_interpret(row):
 
 @pytest.mark.parametrize("name, rows", ALL_FIXTURES)
 def test_security_classification_is_never_folded_into_technical_health(name, rows):
-    """CLAUDE.md section 4 bug 4."""
+    """SPEC.md section 4 bug 4."""
     for row in rows:
         snapshot = harness.kernel_snapshot(row)
         health = snapshot["health_score"]
@@ -326,7 +326,7 @@ def test_parameter_validation_status_is_reported_rather_than_assumed():
     if not LOCAL_ROWS:
         warnings.warn(
             "golden subset: running against invented rows only. This gates scoring regressions; it "
-            "does NOT validate the CLAUDE.md section 12 weights and thresholds, which remain "
+            "does NOT validate the SPEC.md section 12 weights and thresholds, which remain "
             "pending against real data (build the local fixture to do that).",
             stacklevel=2,
         )

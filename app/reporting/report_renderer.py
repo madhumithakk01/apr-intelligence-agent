@@ -1,8 +1,8 @@
-"""Report rendering -- CLAUDE.md sections 5, 13.
+"""Report rendering -- SPEC.md sections 5, 13.
 
 Deterministic. One function, one output format: the structured report
 dict from app.reporting.report_service becomes a Markdown string. This
-is the single rendering path CLAUDE.md section 5 asks for -- no second
+is the single rendering path SPEC.md section 5 asks for -- no second
 renderer, no divergent section templates.
 
 Markdown only. PDF generation and file writing are a delivery concern
@@ -156,7 +156,7 @@ def _run_integrity_section(report: Dict[str, Any]) -> List[str]:
 
 def _delivery_banner(report: Dict[str, Any]) -> List[str]:
     """A report that is not client-deliverable says so, loudly, right
-    under the title -- CLAUDE.md section 2."""
+    under the title -- SPEC.md section 2."""
     delivery = report.get("delivery") or {}
     if delivery.get("client_deliverable"):
         return []

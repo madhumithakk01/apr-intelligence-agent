@@ -25,7 +25,7 @@ from tests.golden_subset import harness  # noqa: E402
 
 NOTE = (
     "Invented rows. No value, cost, or capability name is taken or derived from the client "
-    "workbook -- see README.md. Exercises the scoring paths; does not validate the CLAUDE.md "
+    "workbook -- see README.md. Exercises the scoring paths; does not validate the SPEC.md "
     "section 12 parameters, which needs real data and stays local."
 )
 

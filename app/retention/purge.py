@@ -1,4 +1,4 @@
-"""Bid-outcome data purge -- CLAUDE.md section 2.
+"""Bid-outcome data purge -- SPEC.md section 2.
 
 Cached and stored client data has one deletion trigger -- the bid
 concluded -- not a TTL, and nothing here assumes indefinite retention.
@@ -258,7 +258,7 @@ def purge_all_client_data(
 def _main(argv: Optional[List[str]] = None) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Purge all client data on the bid-outcome trigger (CLAUDE.md section 2).")
+    parser = argparse.ArgumentParser(description="Purge all client data on the bid-outcome trigger (SPEC.md section 2).")
     parser.add_argument("--reason", required=True, help="the bid outcome authorizing the purge")
     parser.add_argument("--dry-run", action="store_true", help="report what would be removed; delete nothing")
     parser.add_argument("--confirm", action="store_true", help="required for a real (non-dry-run) purge")

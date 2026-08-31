@@ -1,4 +1,4 @@
-"""Multi-axis profile building -- CLAUDE.md sections 5 and 9."""
+"""Multi-axis profile building -- SPEC.md sections 5 and 9."""
 
 from __future__ import annotations
 
@@ -100,7 +100,7 @@ def test_partial_cost_is_computed_but_flagged_incomplete():
 
 
 def test_a_withheld_cost_cell_represented_as_none_is_never_treated_as_zero():
-    """Mirrors CLAUDE.md section 2/4 bug 6: a withheld cost must never
+    """Mirrors SPEC.md section 2/4 bug 6: a withheld cost must never
     silently coerce into 0 and quietly deflate cost_per_fte."""
     all_four = dict(fte_count=10, annual_fte_cost=100_000, annual_license_cost=50_000, annual_infrastructure_cost=20_000)
     withheld = pb.build_profile(_app(**all_four, other_costs=None))

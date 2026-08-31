@@ -1,7 +1,7 @@
-"""Report narrative generation -- CLAUDE.md sections 5, 10.
+"""Report narrative generation -- SPEC.md sections 5, 10.
 
 One executive narrative per application, for the final report. This is a
-node, not a loop (CLAUDE.md section 3): the stopping rule is fixed in
+node, not a loop (SPEC.md section 3): the stopping rule is fixed in
 code -- one draft, one regeneration if the first fails grounding, then a
 deterministic fallback -- never the model deciding whether to try again.
 
@@ -11,7 +11,7 @@ Per application:
      COTS scores/labels, the redundancy verdict, any cost-outlier flag,
      the grounded market alternatives, the withheld-field list). Only
      figures the report is allowed to restate go in -- notably no raw
-     cost amounts (CLAUDE.md section 9 keeps cost comparative), so a
+     cost amounts (SPEC.md section 9 keeps cost comparative), so a
      narrative cannot leak or fabricate one.
   2. One structured LLM call turns the facts into 2-4 sentences of prose.
   3. A deterministic, LLM-free grounding check: every number in the
@@ -212,7 +212,7 @@ def _fmt_score(value: Any) -> str:
 def structured_fallback(facts: Dict[str, Any]) -> str:
     """Built entirely from the fact set -- passes check_grounding by
     construction. This is what ships when the model cannot produce a
-    grounded draft in the allowed number of attempts (CLAUDE.md section
+    grounded draft in the allowed number of attempts (SPEC.md section
     10, gate 5)."""
     time = facts["tim_e"]
     cots = facts["cots"]
@@ -392,7 +392,7 @@ def generate_narratives(
     data_sensitivity: DataSensitivity,
 ) -> Dict[str, Dict[str, Any]]:
     """One narrative per scored application, keyed by application id.
-    Linear, not fanned out (CLAUDE.md section 5): every fan-out has
+    Linear, not fanned out (SPEC.md section 5): every fan-out has
     joined by this stage, and each narrative stands on its own
     application's facts. The caller decides which results route to gate 5
     (those whose "source" is the structured fallback)."""

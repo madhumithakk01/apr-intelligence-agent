@@ -1,4 +1,4 @@
-# Golden-subset regression gate (CLAUDE.md section 15).
+# Golden-subset regression gate (SPEC.md section 15).
 #
 # This workflow is the required check on every PR from branch 5 onward.
 # "Required" is a repository setting, not something this file can grant:
@@ -12,7 +12,7 @@
 #
 # No provider credentials are configured here, and that is a constraint,
 # not an omission: the golden fixture holds de-identified client rows,
-# and CLAUDE.md section 11 forbids routing client data to a provider
+# and SPEC.md section 11 forbids routing client data to a provider
 # without a data-processing agreement. The suite is deterministic and
 # makes no LLM call, so it needs no secrets to pass -- and a change that
 # introduces one fails here rather than in front of the client.

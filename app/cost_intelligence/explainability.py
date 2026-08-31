@@ -1,4 +1,4 @@
-"""Cost outlier explainability -- CLAUDE.md sections 5, 10, 12.
+"""Cost outlier explainability -- SPEC.md sections 5, 10, 12.
 
 Single LLM call per flagged outlier -- statistics already decided the
 flag (outlier_detection.py); this module only judges whether the flag is
@@ -6,7 +6,7 @@ explainable by legitimate factors (e.g. unusual scope, a recent
 migration, specialized compliance requirements) versus looking like a
 genuine anomaly worth investigating. It never revisits the flag itself.
 
-CLAUDE.md section 10, gate 4: a flag whose explainability confidence
+SPEC.md section 10, gate 4: a flag whose explainability confidence
 comes back below governance_params
 .COST_OUTLIER_EXPLAINABILITY_CONFIDENCE_THRESHOLD requires human review
 -- regardless of whether the model judged it explainable or not. A
@@ -41,7 +41,7 @@ class ExplainabilityVerdict:
     confidence: Optional[float]
     rationale: str
     needs_review: bool
-    """CLAUDE.md section 10 gate 4: True when confidence is missing or
+    """SPEC.md section 10 gate 4: True when confidence is missing or
     below governance_params.COST_OUTLIER_EXPLAINABILITY_CONFIDENCE_THRESHOLD,
     regardless of the explainable verdict itself."""
 
@@ -179,7 +179,7 @@ def explain_outliers(
     *,
     data_sensitivity: DataSensitivity,
 ) -> List[Dict[str, Any]]:
-    """One call per flag -- CLAUDE.md section 5's "single LLM call
+    """One call per flag -- SPEC.md section 5's "single LLM call
     (explain)" is per outlier, not batched, since flags are scattered
     across different clusters and each judgment stands on its own
     application's profile. Returns the flag merged with its verdict,

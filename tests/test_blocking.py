@@ -1,4 +1,4 @@
-"""Capability blocking -- CLAUDE.md sections 5 and 9."""
+"""Capability blocking -- SPEC.md sections 5 and 9."""
 
 from __future__ import annotations
 
@@ -164,7 +164,7 @@ def test_rerunning_blocking_on_the_same_input_is_stable():
 
 
 def test_as_dict_is_json_serializable_and_orchestration_shaped():
-    """CLAUDE.md section 13's target orchestration graph consumes
+    """SPEC.md section 13's target orchestration graph consumes
     clusters as {"cluster_id", "application_ids"} -- as_dict() must be a
     superset of that shape."""
     import json

@@ -1,4 +1,4 @@
-# Full CI -- CLAUDE.md section 15.
+# Full CI -- SPEC.md section 15.
 #
 # Extends the golden-subset gate (golden-subset.yml, the named required
 # check) rather than replacing it: this workflow adds lint, the whole
@@ -7,7 +7,7 @@
 #
 # No provider secrets are configured, and that is deliberate. The suite
 # is hermetic -- conftest clears the LangSmith env vars and every LLM /
-# search call is mocked -- and CLAUDE.md section 11 forbids client data
+# search call is mocked -- and SPEC.md section 11 forbids client data
 # reaching a provider without a data-processing agreement, so a change
 # that needs a live key fails here instead of in front of the client.
 

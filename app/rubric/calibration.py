@@ -1,4 +1,4 @@
-"""Rubric Calibration -- CLAUDE.md sections 4, 5, 6, 7, 10.
+"""Rubric Calibration -- SPEC.md sections 4, 5, 6, 7, 10.
 
 Turns each qualitative field's free-text answers, once per engagement,
 into a lookup table onto the five canonical labels
@@ -106,7 +106,7 @@ class FieldRubric:
     anchors: Dict[str, RubricAnchor]  # normalized raw value -> anchor
 
     def lookup(self, raw_value: Optional[Any]) -> Optional[RubricAnchor]:
-        """The mechanism behind CLAUDE.md section 7's escalation trigger
+        """The mechanism behind SPEC.md section 7's escalation trigger
         ("the raw value doesn't cleanly match a calibrated rubric
         anchor"): None means no anchor exists for this value at all. A
         returned anchor whose `.label` is None means calibration was

@@ -1,4 +1,4 @@
-# Lint configuration -- CLAUDE.md section 15 (CI).
+# Lint configuration -- SPEC.md section 15 (CI).
 #
 # Deliberately narrow. `F` (pyflakes: unused imports, undefined names,
 # unused locals, f-string mistakes) and `E9` (syntax / IndentationError)

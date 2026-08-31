@@ -1,16 +1,16 @@
-"""Cost outlier detection -- CLAUDE.md sections 5, 9, 12.
+"""Cost outlier detection -- SPEC.md sections 5, 9, 12.
 
 Deterministic statistics decide the flag; nothing here calls an LLM
 (that is explainability.py's job, and only for a row already flagged
 here). Peer grouping reuses the same capability clusters redundancy
 blocking already produces (app.redundancy.blocking) -- "peer cluster"
-in CLAUDE.md section 12's MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER is the
+in SPEC.md section 12's MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER is the
 same concept as a blocking cluster, and building a second, parallel
 notion of "similar applications" alongside blocking's would be exactly
-the kind of second copy CLAUDE.md section 1 rules out. The comparison
+the kind of second copy SPEC.md section 1 rules out. The comparison
 metric is cost-per-FTE (app.redundancy.profile_builder's CostAxis) --
 never a raw annual total, which misleads across applications of very
-different scale, the same normalization principle CLAUDE.md section 9
+different scale, the same normalization principle SPEC.md section 9
 states for redundancy comparison.
 
 The statistical rule is Tukey's IQR fence (flag outside
@@ -21,7 +21,7 @@ otherwise inflate the standard deviation a z-score depends on.
 
 A cluster with fewer than MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER members
 with a *known* cost-per-FTE never flags anything from that cluster --
-CLAUDE.md section 12: "refuse to flag rather than manufacture a signal
+SPEC.md section 12: "refuse to flag rather than manufacture a signal
 from noise." A member whose own cost is unknown is never flagged either
 (there is nothing to compare) and does not count toward the floor.
 """

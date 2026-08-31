@@ -1,4 +1,4 @@
-"""Qualitative Row Scoring -- CLAUDE.md sections 2, 4, 5, 7, 10, 12.
+"""Qualitative Row Scoring -- SPEC.md sections 2, 4, 5, 7, 10, 12.
 
 Never touches a real provider: every test mocks
 app.qualitative_scoring.scorer.get_completion, matching the pattern

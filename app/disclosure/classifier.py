@@ -1,10 +1,10 @@
-"""Disclosure & Provenance Classification -- CLAUDE.md sections 5 and 6.
+"""Disclosure & Provenance Classification -- SPEC.md sections 5 and 6.
 
 Runs first among the LLM-backed stages and gates every downstream
 scoring step for the field it classifies: "Confidential" / "cannot say"
 / "cannot disclose" is a deliberate business decision, not a
 data-quality defect, and a withheld field is never scored, never
-defaulted, never imputed (CLAUDE.md section 2).
+defaulted, never imputed (SPEC.md section 2).
 
 Technique per section 5's table: a single structured LLM call. The unit
 of that call is one application row -- every classifiable field of the
@@ -24,7 +24,7 @@ Only the fields that actually feed the scoring pipeline are classified
 here (CLASSIFIABLE_FIELDS) -- the twelve qualitative TIM-E axes plus the
 five cost/count fields. Capability tags are deliberately excluded: they
 are the redundancy blocking key, "rarely withheld... block generously"
-(CLAUDE.md section 9), not a field this gate should ever hold back.
+(SPEC.md section 9), not a field this gate should ever hold back.
 Identity fields (owner, email, description) are never scored and so are
 never classified.
 """
@@ -53,7 +53,7 @@ DISCLOSURE_CATEGORIES = (
     GENUINELY_UNKNOWN,
     SUSPICIOUS_PLACEHOLDER,
 )
-"""CLAUDE.md section 6, verbatim."""
+"""SPEC.md section 6, verbatim."""
 
 # canonical (snake_case) field name -> human-readable label, for the LLM
 # prompt and the Phase 2 agenda text. Snake_case because that is the
@@ -342,7 +342,7 @@ def apply_disclosure_gate(
 ) -> Dict[str, Any]:
     """A copy of `application` with every non-Answered classifiable field
     replaced by None. This is the mechanism behind "gates every
-    downstream scoring step for that field" (CLAUDE.md section 6): a
+    downstream scoring step for that field" (SPEC.md section 6): a
     later stage that reads the gated dict instead of the raw one can
     never accidentally score a withheld value, because the value simply
     isn't there -- there is nothing for a bug in that stage to default
@@ -380,7 +380,7 @@ def build_phase2_agenda(
     results: Dict[str, DisclosureResult],
 ) -> List[Dict[str, Any]]:
     """One agenda item per non-Answered field, for whichever vendor wins
-    (CLAUDE.md section 6): incomplete Phase 1 data reframed as a
+    (SPEC.md section 6): incomplete Phase 1 data reframed as a
     concrete Phase 2 discovery item, not a gap logged as a complaint. A
     failed classification still produces an item -- it needs the same
     follow-up as any other unresolved field, and skipping it here would

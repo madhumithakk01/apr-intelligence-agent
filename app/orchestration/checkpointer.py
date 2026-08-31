@@ -1,4 +1,4 @@
-"""SQLite checkpointer for the orchestration graph -- CLAUDE.md section 15.
+"""SQLite checkpointer for the orchestration graph -- SPEC.md section 15.
 
 SQLite now, Postgres as the stated production path -- the same migration
 point as the application database, and for the same reason: Render's
@@ -6,7 +6,7 @@ free tier does not persist the file across restarts.
 
 Retention: a checkpoint row contains client application data verbatim,
 so it falls under the same deletion trigger as the market cache and the
-DB rows -- tied to bid outcome, not a generic TTL (CLAUDE.md section 2).
+DB rows -- tied to bid outcome, not a generic TTL (SPEC.md section 2).
 ``purge_checkpoint_store`` is that trigger's hook; it deletes the whole
 store rather than expiring rows by age, because "the bid concluded" is
 the only event that authorizes deletion and it applies to everything at
@@ -52,7 +52,7 @@ def build_in_memory_checkpointer() -> InMemorySaver:
 
 def purge_checkpoint_store(db_path: Optional[Union[str, Path]] = None) -> bool:
     """Delete the checkpoint store outright. Call on the bid-outcome
-    deletion trigger (CLAUDE.md section 2). Returns whether a file was
+    deletion trigger (SPEC.md section 2). Returns whether a file was
     actually removed."""
     path = Path(db_path) if db_path is not None else DEFAULT_CHECKPOINT_DB
     if not path.exists():
