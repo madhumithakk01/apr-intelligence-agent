@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-import pytest
-
 from app.cost_intelligence import explainability as ex
 from app.cost_intelligence.outlier_detection import ClusterCostStats, CostOutlierFlag
 from app.llm.providers import DataSensitivity, LLMProviderError

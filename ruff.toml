@@ -1,0 +1,15 @@
+# Lint configuration -- CLAUDE.md section 15 (CI).
+#
+# Deliberately narrow. `F` (pyflakes: unused imports, undefined names,
+# unused locals, f-string mistakes) and `E9` (syntax / IndentationError)
+# catch real defects. Import sorting (`I`) and line length (`E501`) are
+# intentionally left off: this codebase was not written to a style
+# checker, and turning them on would mean a repo-wide reformat that
+# buries actual bugs in noise. Tighten later if the team wants to.
+
+target-version = "py312"
+line-length = 120
+extend-exclude = ["venv", "knowledge_db", "reports", "data"]
+
+[lint]
+select = ["F", "E9"]

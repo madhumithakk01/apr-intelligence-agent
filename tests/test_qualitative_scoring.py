@@ -473,7 +473,7 @@ def test_an_unrecognized_label_in_the_response_is_rejected(monkeypatch):
 
 
 def test_a_field_the_model_was_not_asked_about_is_ignored(monkeypatch):
-    calls = _make_llm_mock(monkeypatch, responses=_tool_call_response(
+    _make_llm_mock(monkeypatch, responses=_tool_call_response(
         [
             {"field": "business_criticality", "label": "very high", "confidence": 0.99, "rationale": "r"},
             {"field": "not_a_real_field", "label": "medium", "confidence": 0.9, "rationale": "r"},

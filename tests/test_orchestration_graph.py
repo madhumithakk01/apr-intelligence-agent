@@ -858,8 +858,6 @@ def test_block_capabilities_delegates_to_the_real_module(monkeypatch):
     """Verifies the wiring this branch adds: block_capabilities calls
     app.redundancy.blocking.block_by_capability over state["applications"]
     -- deterministic, so no provider mocking is needed here at all."""
-    from app.redundancy import blocking
-
     monkeypatch.setattr(nodes, "block_capabilities", _REAL_BLOCK_CAPABILITIES)
 
     applications = [
