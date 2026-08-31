@@ -9,6 +9,7 @@ from fastapi import Request
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 
+from app.api.batch import router as batch_router
 from app.database.db import Base
 from app.database.db import SessionLocal
 from app.database.db import engine
@@ -35,6 +36,12 @@ app = FastAPI(
 )
 templates = Jinja2Templates(directory=str(PROJECT_ROOT / "templates"))
 renderer = ReportRenderer(reports_dir=str(REPORTS_DIR))
+
+# The portfolio-scale pipeline (CLAUDE.md section 5) runs as an async job
+# -- submit, poll, resume -- because a 100-row run is rate-limited well
+# past any request timeout (section 11). The single-record routes below
+# are the legacy path, kept until callers move over.
+app.include_router(batch_router)
 
 
 def _run_analysis(db, app_input: ApplicationInput) -> tuple[dict, str, str, AnalysisRun]:
