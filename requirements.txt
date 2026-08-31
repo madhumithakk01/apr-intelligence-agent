@@ -14,3 +14,4 @@ pytest==9.1.1
 httpx==0.28.1
 langgraph==1.2.11
 langgraph-checkpoint-sqlite==3.1.1
+langsmith==0.11.2
