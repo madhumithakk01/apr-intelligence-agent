@@ -35,6 +35,7 @@ from langgraph.types import Command
 
 from app.orchestration.checkpointer import build_sqlite_checkpointer
 from app.orchestration.graph import build_graph, initial_state, run_config
+from app.orchestration.shadow import normalize_mode
 
 QUEUED = "queued"
 RUNNING = "running"
@@ -75,6 +76,7 @@ class _RunRecord:
     application_count: int
     submitted_at: str
     updated_at: str
+    run_mode: str = "shadow"
     status: str = QUEUED
     pending_review: Optional[Dict[str, Any]] = None
     gates_completed: List[str] = field(default_factory=list)
@@ -85,12 +87,14 @@ class _RunRecord:
         return {
             "run_id": self.run_id,
             "status": self.status,
+            "run_mode": self.run_mode,
             "data_sensitivity": self.data_sensitivity,
             "application_count": self.application_count,
             "submitted_at": self.submitted_at,
             "updated_at": self.updated_at,
             "gates_completed": list(self.gates_completed),
             "pending_review": self.pending_review,
+            "delivery": (self.report or {}).get("delivery"),
             "report": self.report,
             "error": self.error,
             "recovered": False,
@@ -129,12 +133,15 @@ class BatchRunner:
         *,
         data_sensitivity: str = "real",
         dataset_path: Optional[str] = None,
+        run_mode: str = "shadow",
     ) -> str:
         applications = list(applications or [])
         run_id = uuid4().hex
+        run_mode = normalize_mode(run_mode)
         record = _RunRecord(
             run_id=run_id,
             data_sensitivity=data_sensitivity,
+            run_mode=run_mode,
             application_count=len(applications),
             submitted_at=_now(),
             updated_at=_now(),
@@ -142,7 +149,7 @@ class BatchRunner:
         with self._lock:
             self._registry[run_id] = record
 
-        state = initial_state(run_id, applications, data_sensitivity)
+        state = initial_state(run_id, applications, data_sensitivity, run_mode)
         if dataset_path:
             state = {**state, "dataset_path": dataset_path}
         self._schedule(run_id, state)
@@ -234,16 +241,19 @@ class BatchRunner:
         else:
             status = RUNNING
 
+        report = snapshot.values.get("report") if status == COMPLETE else None
         return {
             "run_id": run_id,
             "status": status,
+            "run_mode": normalize_mode(snapshot.values.get("run_mode")),
             "data_sensitivity": snapshot.values.get("data_sensitivity"),
             "application_count": len(snapshot.values.get("applications") or []),
             "submitted_at": None,
             "updated_at": None,
             "gates_completed": sorted((snapshot.values.get("gate_decisions") or {}).keys()),
             "pending_review": None,
-            "report": snapshot.values.get("report") if status == COMPLETE else None,
+            "delivery": (report or {}).get("delivery"),
+            "report": report,
             "error": None,
             "recovered": True,
         }

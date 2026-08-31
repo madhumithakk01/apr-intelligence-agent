@@ -63,7 +63,7 @@ from app.market_intelligence import extraction as market_extraction
 from app.market_intelligence import graph as market_intelligence_graph
 from app.market_intelligence import segments as market_segments
 from app.narrative import generator as narrative_generator
-from app.orchestration import gates
+from app.orchestration import gates, shadow
 from app.orchestration.state import (
     ClusterTask,
     GraphState,
@@ -476,8 +476,21 @@ def render_report(state: GraphState) -> Dict[str, Any]:
     the one rendering path (CLAUDE.md section 5). report_service builds
     the structured report dict from the finished run state;
     report_renderer turns it into Markdown, carried alongside the dict
-    under state["report"]["markdown"]. Pure: no LLM call, no file I/O."""
-    report = report_service.build_report(state)
+    under state["report"]["markdown"].
+
+    This stage also applies the shadow-mode delivery gate (CLAUDE.md
+    section 2): it stamps report["delivery"] with whether the report may
+    reach the client, and -- for a shadow run -- records the completed
+    run in the engagement ledger (idempotent by run id) so a later
+    sign-off can unlock live delivery. The ledger append is the one file
+    write in an otherwise pure stage."""
+    run_mode = shadow.normalize_mode(state.get("run_mode"))
+    ledger = shadow.default_ledger()
+    report = report_service.build_report(state, delivery=ledger.delivery_status(run_mode))
+    if run_mode == shadow.SHADOW:
+        ledger.record_shadow_run(
+            state.get("run_id") or "", application_count=len(state.get("applications") or [])
+        )
     report["markdown"] = report_renderer.render_markdown(report)
     return {"report": report, "stage_log": [_stage("render_report")]}
 

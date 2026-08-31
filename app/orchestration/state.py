@@ -90,6 +90,15 @@ class GraphState(TypedDict, total=False):
     by every stage that calls it, starting with disclosure classification
     (branch 6)."""
 
+    run_mode: str
+    """"shadow" | "live" -- CLAUDE.md section 2. Defaults to "shadow"
+    (app.orchestration.graph.initial_state); an unspecified or
+    unrecognized value is treated as "shadow". A shadow run's report is
+    never client-deliverable, and a live run's report is deliverable
+    only after a shadow run for the engagement has been signed off. The
+    render_report stage reads this and app.orchestration.shadow to stamp
+    report["delivery"]."""
+
     dataset_path: Optional[str]
     """Excel workbook to load if `applications` isn't already populated
     (app.orchestration.nodes.ingest). Omitted (or `applications` supplied

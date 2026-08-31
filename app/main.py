@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 
 from app.api.batch import router as batch_router
+from app.api.shadow import router as shadow_router
 from app.database.db import Base
 from app.database.db import SessionLocal
 from app.database.db import engine
@@ -42,6 +43,7 @@ renderer = ReportRenderer(reports_dir=str(REPORTS_DIR))
 # past any request timeout (section 11). The single-record routes below
 # are the legacy path, kept until callers move over.
 app.include_router(batch_router)
+app.include_router(shadow_router)
 
 
 def _run_analysis(db, app_input: ApplicationInput) -> tuple[dict, str, str, AnalysisRun]:
