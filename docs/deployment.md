@@ -93,12 +93,25 @@ executed in **shadow mode** and an internal reviewer has signed it off.
 
 ## Data deletion (CLAUDE.md section 2)
 
-Cached and stored client data has a deletion trigger tied to the bid
-outcome, not a TTL. On that trigger, clear all of:
+Cached and stored client data has one deletion trigger -- the bid
+concluded -- not a TTL. `app.retention.purge.purge_all_client_data` is
+the single entry point: it clears every store together and writes an
+audit line to `knowledge_db/purge_audit.jsonl`.
 
-- `purge_checkpoint_store()` for each checkpoint DB;
-- the application DB rows / file;
-- the shadow-mode ledger (`knowledge_db/shadow_ledger.json`);
-- the LangSmith project (out of band, in LangSmith);
-- any uploaded workbooks under `knowledge_db/batch_uploads/` and
-  generated files under `reports/`.
+```bash
+python -m app.retention.purge --reason "bid awarded to vendor X" --dry-run   # preview
+python -m app.retention.purge --reason "bid awarded to vendor X" --confirm   # do it
+```
+
+or `POST /api/retention/purge` with `{"reason": "...", "confirm": true}`
+(`"dry_run": true` to preview); `GET /api/retention/purge/history` shows
+recent audit records.
+
+It clears: both LangGraph checkpoint stores (with their `-wal`/`-shm`
+sidecars), the `applications` / `market_products` / `analysis_runs` DB
+rows, the shadow-mode ledger, uploaded workbooks under
+`knowledge_db/batch_uploads/`, and generated files under `reports/`.
+
+**LangSmith runs are not deleted by this** -- they live in a
+third-party project. Delete the `LANGSMITH_PROJECT` project in LangSmith
+manually; the purge report flags this as an outstanding step.
