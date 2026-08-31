@@ -1,0 +1,34 @@
+# Render deployment blueprint -- CLAUDE.md section 15 (Host: Render free
+# tier). One Docker web service.
+#
+# SQLite -- both the application DB (app/database/db.py) and the
+# LangGraph checkpoint store (app/orchestration/checkpointer.py) -- lives
+# on the container's ephemeral filesystem and does NOT survive a restart
+# or redeploy on the free tier. Known limitation; Postgres is the stated
+# migration path for both, at the same swap points (docs/deployment.md).
+#
+# Every provider key is set in the Render dashboard, never committed
+# (sync: false). Without GROQ_API_KEY the pipeline cannot score; without
+# LANGSMITH_API_KEY tracing is simply a no-op.
+
+services:
+  - type: web
+    name: apr-intelligence-agent
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/runs
+    autoDeploy: false
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_PROJECT
+        value: apr-intelligence-agent
+      - key: PYTHONUNBUFFERED
+        value: "1"

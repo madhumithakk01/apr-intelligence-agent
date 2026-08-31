@@ -1,0 +1,34 @@
+# Keep the build context small and free of anything that should never
+# ship in the image: local state, secrets, tests, dev tooling, docs.
+.git
+.github
+.gitignore
+.dockerignore
+.ruff_cache
+ruff.toml
+
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+tests/
+run_apr_prototype.py
+import_dataset.py
+system_design.md
+install_log.txt
+README.md
+docs/
+render.yaml
+
+knowledge_db/
+reports/
+data/
+*.db
+*.sqlite
+
+.env
+.env.*
+*.xlsx
+*.xls
