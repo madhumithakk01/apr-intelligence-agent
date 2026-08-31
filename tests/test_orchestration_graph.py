@@ -57,6 +57,7 @@ _REAL_EXPLAIN_COST_OUTLIERS = nodes.explain_cost_outliers
 _REAL_BUILD_MARKET_SEGMENTS = nodes.build_market_segments
 _REAL_STAGE_MARKET_RESEARCH = nodes._stage_market_research
 _REAL_EXTRACT_AND_GROUND_PRODUCTS = nodes.extract_and_ground_products
+_REAL_GENERATE_NARRATIVES = nodes.generate_narratives
 """Captured at import time, before the autouse fixture below ever runs,
 so a test that wants the real wiring back can restore it explicitly."""
 
@@ -112,13 +113,18 @@ def _fake_extract_and_ground_products(state):
     return {"stage_log": [nodes._stage("extract_and_ground_products")]}
 
 
+def _fake_generate_narratives(state):
+    return {"stage_log": [nodes._stage("generate_narratives")]}
+
+
 @pytest.fixture(autouse=True)
 def _no_real_llm_calls_in_this_file(monkeypatch):
     """This file tests orchestration control flow, not what
     classify_disclosure, calibrate_rubrics, score_row,
     block_capabilities, build_profiles, adjudicate_cluster,
-    explain_cost_outliers, research_segment, or
-    extract_and_ground_products themselves compute (see
+    explain_cost_outliers, research_segment,
+    extract_and_ground_products, or generate_narratives themselves
+    compute (see
     tests/test_disclosure_classifier.py, tests/test_rubric_calibration.py,
     tests/test_qualitative_scoring.py, tests/test_blocking.py,
     tests/test_profile_builder.py, tests/test_redundancy_adjudicator.py,
@@ -126,8 +132,9 @@ def _no_real_llm_calls_in_this_file(monkeypatch):
     tests/test_cost_outlier_detection.py,
     tests/test_cost_outlier_explainability.py,
     tests/test_market_intelligence_segments.py,
-    tests/test_market_intelligence_graph.py, and
-    tests/test_market_intelligence_extraction.py). Autouse so no test
+    tests/test_market_intelligence_graph.py,
+    tests/test_market_intelligence_extraction.py, and
+    tests/test_narrative_generator.py). Autouse so no test
     here can accidentally reach a real provider or a real search --
     including on a machine that happens to have real GROQ_API_KEY/
     TAVILY_API_KEY exported -- and so the rest of this file's tests can
@@ -159,6 +166,7 @@ def _no_real_llm_calls_in_this_file(monkeypatch):
     monkeypatch.setattr(nodes, "build_market_segments", _fake_build_market_segments)
     monkeypatch.setattr(nodes, "_stage_market_research", _fake_stage_market_research)
     monkeypatch.setattr(nodes, "extract_and_ground_products", _fake_extract_and_ground_products)
+    monkeypatch.setattr(nodes, "generate_narratives", _fake_generate_narratives)
 
 EXPECTED_NODES = {
     "ingest",
@@ -1061,6 +1069,43 @@ def test_extract_and_ground_products_delegates_to_the_real_module(monkeypatch):
     assert seen["segment_ids"] == expected_segments
     assert seen["data_sensitivity"] is DataSensitivity.SYNTHETIC
     assert set(final["grounded_claims"]) == expected_segments
+
+
+def test_generate_narratives_delegates_to_the_real_module_and_wires_gate_5(monkeypatch):
+    """Verifies the wiring this branch adds: generate_narratives passes
+    the run's scored/redundancy/cost/market/withheld state to
+    app.narrative.generator.generate_narratives, writes the result under
+    state["narratives"], and enqueues a gate 5 item for every narrative
+    whose source is the structured-bullet fallback -- without exercising
+    the generator's own LLM internals (its own test module's job)."""
+    from app.llm.providers import DataSensitivity
+    from app.narrative import generator as narrative_generator
+
+    monkeypatch.setattr(nodes, "generate_narratives", _REAL_GENERATE_NARRATIVES)
+
+    seen = {}
+
+    def fake_generate_narratives(applications, kernel_results, verdicts, cost_outliers,
+                                 grounded_claims, phase2_agenda, *, data_sensitivity):
+        seen["application_ids"] = {a["application_id"] for a in applications}
+        seen["data_sensitivity"] = data_sensitivity
+        return {
+            "SYN-001": {"application_id": "SYN-001", "summary": "ok", "source": narrative_generator.SOURCE_GENERATED,
+                        "attempts": 1, "llm_unsupported": [], "facts": {}},
+            "SYN-002": {"application_id": "SYN-002", "summary": "- bullet", "source": narrative_generator.SOURCE_FALLBACK,
+                        "attempts": 2, "llm_unsupported": ["number:999"], "facts": {}},
+        }
+
+    monkeypatch.setattr(narrative_generator, "generate_narratives", fake_generate_narratives)
+
+    graph = build_graph(build_in_memory_checkpointer())
+    final, stops = _run_to_completion(graph, _full_run_state(), run_config("t-narrative-wiring"))
+
+    assert seen["application_ids"] == {app["application_id"] for app in SYNTHETIC_APPLICATIONS}
+    assert seen["data_sensitivity"] is DataSensitivity.SYNTHETIC
+    assert set(final["narratives"]) == {"SYN-001", "SYN-002"}
+    assert stops == [gates.GATE_RUBRIC_SIGNOFF, gates.GATE_NARRATIVE_GROUNDING]
+    assert final["gate_decisions"][gates.GATE_NARRATIVE_GROUNDING]["reviewed_subject_ids"] == ["SYN-002"]
 
 
 def test_detect_cost_outliers_delegates_to_the_real_module(monkeypatch):

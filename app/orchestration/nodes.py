@@ -23,9 +23,12 @@ them in feat/market-intelligence-agent (branch 12) -- the only genuine
 agent in this system (CLAUDE.md section 3): a real LangGraph loop
 (app.market_intelligence.graph), not a single call or a bounded ensemble
 like every other LLM-backed stage here. ``extract_and_ground_products``
-joins them now, in feat/product-extraction-grounding (branch 13): a
-single structured call over the agent's kept search evidence, plus a
-deterministic claim-level grounding check. LANDED_BY records each
+joined them in feat/product-extraction-grounding (branch 13): a single
+structured call over the agent's kept search evidence, plus a
+deterministic claim-level grounding check. ``generate_narratives`` joins
+them now, in feat/narrative-generation (branch 14): one structured call
+per application with a fixed one-retry budget and a deterministic
+structured-bullet fallback (CLAUDE.md section 5). LANDED_BY records each
 transition to real the same way IMPLEMENTED_BY records a pending one, so
 the stage log always says which is which.
 
@@ -37,9 +40,10 @@ delegates its body to a ``_stage_*`` function purely so that isolation
 is testable by substituting one. ``calibrate_rubrics``, ``apply_scoring_
 kernel``, ``block_capabilities``, ``build_profiles``,
 ``detect_cost_outliers``, ``explain_cost_outliers``,
-``build_market_segments``, and ``extract_and_ground_products`` are linear
-nodes, not fanned out, and have no such split -- each has exactly one
-call site (a module-level function elsewhere) for a test to substitute.
+``build_market_segments``, ``extract_and_ground_products``, and
+``generate_narratives`` are linear nodes, not fanned out, and have no
+such split -- each has exactly one call site (a module-level function
+elsewhere) for a test to substitute.
 """
 
 from __future__ import annotations
@@ -55,6 +59,7 @@ from app.llm.providers import DataSensitivity
 from app.market_intelligence import extraction as market_extraction
 from app.market_intelligence import graph as market_intelligence_graph
 from app.market_intelligence import segments as market_segments
+from app.narrative import generator as narrative_generator
 from app.orchestration import gates
 from app.orchestration.state import (
     ClusterTask,
@@ -73,7 +78,6 @@ from app.scoring import kernel
 logger = logging.getLogger(__name__)
 
 IMPLEMENTED_BY = {
-    "generate_narratives": "feat/narrative-generation (14)",
     "render_report": "feat/report-rendering-consolidation (15)",
 }
 
@@ -92,6 +96,7 @@ LANDED_BY = {
     "build_market_segments": "feat/market-intelligence-agent (12)",
     "research_segment": "feat/market-intelligence-agent (12)",
     "extract_and_ground_products": "feat/product-extraction-grounding (13)",
+    "generate_narratives": "feat/narrative-generation (14)",
 }
 
 
@@ -422,10 +427,43 @@ def extract_and_ground_products(state: GraphState) -> Dict[str, Any]:
 
 
 def generate_narratives(state: GraphState) -> Dict[str, Any]:
-    """Bounded retry-once generation with a scripted fallback to
-    structured bullets. The stopping rule is fixed in code, never model
-    judgment (section 5) -- which is why this is a node, not a loop."""
-    return {"stage_log": [_stage("generate_narratives")]}
+    """One structured narrative call per scored application
+    (app.narrative.generator, branch 14), with a fixed one-retry budget
+    and a deterministic structured-bullet fallback -- the stopping rule
+    is in code, never model judgment (CLAUDE.md section 5), which is why
+    this is a node, not a loop. Every narrative that fell back to bullets
+    (failed grounding within the attempt budget, or the call itself
+    failed twice) enqueues its own gate 5 item: the report is not final
+    until a reviewer has seen it, though nothing is withheld in the
+    meantime (section 10)."""
+    narratives = narrative_generator.generate_narratives(
+        state.get("applications") or [],
+        state.get("kernel_results") or {},
+        state.get("verdicts") or [],
+        state.get("cost_outliers") or [],
+        state.get("grounded_claims") or {},
+        state.get("phase2_agenda") or [],
+        data_sensitivity=_data_sensitivity(state),
+    )
+    review_items = [
+        {
+            "gate": gates.GATE_NARRATIVE_GROUNDING,
+            "subject_id": application_id,
+            "reason": f"Narrative failed grounding within {narrative['attempts']} attempt(s); "
+                      f"shipped as structured bullets.",
+            "payload": narrative,
+        }
+        for application_id, narrative in narratives.items()
+        if narrative.get("source") == narrative_generator.SOURCE_FALLBACK
+    ]
+
+    update: Dict[str, Any] = {
+        "narratives": narratives,
+        "stage_log": [_stage("generate_narratives")],
+    }
+    if review_items:
+        update["review_queue"] = review_items
+    return update
 
 
 def render_report(state: GraphState) -> Dict[str, Any]:

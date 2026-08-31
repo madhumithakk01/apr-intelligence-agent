@@ -160,6 +160,14 @@ class GraphState(TypedDict, total=False):
     fan-out has joined; keyed the same way as market_findings."""
 
     narratives: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
+    """application_id -> {"summary", "source" ("generated" |
+    "structured_fallback"), "attempts", "facts", ...}
+    (app.narrative.generator, branch 14). One structured call per scored
+    application with a fixed one-retry budget; a draft that fails the
+    deterministic grounding check within budget is replaced by
+    structured bullets built from the same facts and routed to gate 5.
+    Written by the linear generate_narratives stage."""
+
     report: Dict[str, Any]
 
     review_queue: Annotated[List[ReviewItem], extend]
