@@ -14,7 +14,6 @@ venv/
 .venv/
 
 tests/
-run_apr_prototype.py
 import_dataset.py
 system_design.md
 install_log.txt

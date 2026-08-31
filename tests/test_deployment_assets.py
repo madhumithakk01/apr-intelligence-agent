@@ -27,7 +27,7 @@ def test_dockerfile_matches_the_documented_shape():
     text = _read("Dockerfile")
     assert "FROM python:3.12-slim" in text  # CLAUDE.md section 15
     assert "requirements.txt" in text
-    assert "COPY app ./app" in text and "COPY templates ./templates" in text
+    assert "COPY app ./app" in text
     assert "uvicorn app.main:app" in text
     assert "--port ${PORT:-8000}" in text  # honours the host-injected port
 

@@ -88,19 +88,3 @@ class MarketProduct(Base):
     snippet = Column(Text)
     structured_json = Column(Text)
     fetched_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
-class AnalysisRun(Base):
-
-    __tablename__ = "analysis_runs"
-
-    id = Column(Integer, primary_key=True, index=True)
-    application_id = Column(String, index=True)
-    application_name = Column(String)
-    tim_e_decision = Column(String)
-    tim_e_score = Column(Float)
-    cots_recommendation = Column(String)
-    modernization_recommendation = Column(String)
-    report_markdown = Column(Text)
-    report_pdf_path = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

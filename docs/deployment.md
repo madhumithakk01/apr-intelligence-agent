@@ -1,8 +1,9 @@
 # Deployment
 
 CLAUDE.md section 15. The service is a single FastAPI app
-(`app.main:app`) exposing the async batch job API (`/api/runs`) plus the
-legacy single-record routes.
+(`app.main:app`) exposing the async batch job API: `/api/runs` (submit /
+poll / resume), `/api/shadow` (the shadow-mode delivery gate), and
+`/api/retention` (the bid-outcome purge).
 
 ## Run locally with Docker
 
@@ -13,8 +14,8 @@ docker run --rm -p 8000:8000 --env-file .env apr-intelligence-agent
 ```
 
 The image is `python:3.12-slim`, single stage, uvicorn entrypoint. It
-copies only `app/` and `templates/`; `.dockerignore` keeps tests, local
-state, secrets, and dev scripts out of the build context.
+copies only `app/`; `.dockerignore` keeps tests, local state, secrets,
+and dev scripts out of the build context.
 
 ## Environment variables
 

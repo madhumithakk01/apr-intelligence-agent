@@ -204,15 +204,14 @@ def _numeric_65_or_70_literal_lines(path: Path):
 
 
 def test_no_second_cots_threshold_in_source():
-    repo_root = Path(__file__).resolve().parent.parent
-    files = [
-        repo_root / "app" / "scoring" / "kernel.py",
-        repo_root / "app" / "services" / "agent_service.py",
-        repo_root / "app" / "services" / "analysis_service.py",
-    ]
-    for path in files:
-        lines = _numeric_65_or_70_literal_lines(path)
-        assert lines == [], f"Bare 65/70 numeric literal found in {path.name} at line(s) {lines}"
+    """CLAUDE.md section 4 bug 3: one canonical COTS threshold, read
+    from governance_params. The two former scoring engines that held the
+    conflicting 65-vs-70 literals (agent_service.py, analysis_service.py)
+    were deleted once the async pipeline replaced them, so kernel.py is
+    the only engine left to guard."""
+    kernel_path = Path(__file__).resolve().parent.parent / "app" / "scoring" / "kernel.py"
+    lines = _numeric_65_or_70_literal_lines(kernel_path)
+    assert lines == [], f"Bare 65/70 numeric literal found in kernel.py at line(s) {lines}"
 
 
 def test_withheld_cost_does_not_crash_and_is_not_zeroed():

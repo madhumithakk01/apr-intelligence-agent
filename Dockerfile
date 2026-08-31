@@ -16,7 +16,6 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY app ./app
-COPY templates ./templates
 
 # Runtime-writable state the app creates on import (SQLite app DB and the
 # LangGraph checkpoint store live here). On Render's free tier this
