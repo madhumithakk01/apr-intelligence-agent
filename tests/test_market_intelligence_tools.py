@@ -6,10 +6,6 @@ app.market_intelligence.tools.TavilyClient or clears TAVILY_API_KEY.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
-import pytest
-
 from app.market_intelligence import tools
 
 
