@@ -107,6 +107,33 @@ time, making the ensemble meaningless. 0.7 is a conventional
 moderate-diversity value for a classification-style task; not yet
 validated against the golden subset."""
 
+# --- Consumed by market_intelligence/graph.py (branch 12) ---
+
+MARKET_AGENT_ITERATION_CAP = 4
+"""Fixed (CLAUDE.md section 12). Safety rail, not the primary stop
+logic (CLAUDE.md section 8): the model's own sufficiency judgment and
+the diminishing-returns signal are meant to end a branch's loop first;
+this only overrides them when a branch is still going at iteration 4."""
+
+MARKET_SEARCH_RESULTS_PER_QUERY = 5
+"""Not itemized in CLAUDE.md section 12's table. How many raw results
+the search tool returns per query -- a retrieval-breadth knob, not a
+correctness-critical one, so no golden-subset validation is claimed for
+it; picked to keep each iteration's LLM call (which reads every result)
+within a reasonable token budget against Groq's TPM limits (section
+11)."""
+
+MARKET_AGENT_TEMPERATURE = 0.2
+"""Not itemized in CLAUDE.md section 12's table. Low but not zero: the
+per-iteration assessment call is a judgment (is this coverage
+sufficient? is this result relevant or SEO noise?), not a fixed
+classification into a handful of known labels the way most other
+structured calls in this codebase are -- some latitude helps it reason
+about genuinely novel search results, while staying far below the
+ensemble temperatures (0.7) used elsewhere in this codebase for
+deliberately diverse sampling, since this call's samples are never
+voted against each other. Not yet validated against the golden subset."""
+
 # --- Consumed by cost_intelligence/{outlier_detection,explainability}.py
 # (branch 11) ---
 
@@ -142,6 +169,6 @@ is a starting point, not an empirically derived value."""
 # MUST be read from here, never re-hardcoded, once its owning branch
 # lands. ---
 
-MARKET_AGENT_ITERATION_CAP = 4
-"""Owned by: feat/market-intelligence-agent (branch 12). Safety rail,
-not the primary stop logic -- see CLAUDE.md section 8."""
+# (none currently -- every governance parameter above is consumed by a
+# landed branch. Future branches add their not-yet-wired parameters here
+# first, then move them up to a "Consumed by" section on landing.)

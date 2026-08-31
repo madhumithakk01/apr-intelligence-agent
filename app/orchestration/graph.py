@@ -1,7 +1,7 @@
 """Top-level orchestration StateGraph -- CLAUDE.md sections 5, 10, 13.
 
 The pipeline's control flow, and only its control flow: stage order,
-three ``Send`` fan-outs, the five ``interrupt()`` gates, and a
+four ``Send`` fan-outs, the five ``interrupt()`` gates, and a
 checkpointer that makes a suspended run resumable. What each stage node
 does is out of scope for this file (app/orchestration/nodes.py); most
 are still pass-through stubs, and ingest/classify_disclosure have been
@@ -141,6 +141,7 @@ def build_graph(checkpointer: Any = None) -> Any:
     graph.add_node("detect_cost_outliers", nodes.detect_cost_outliers)
     graph.add_node("explain_cost_outliers", nodes.explain_cost_outliers)
     graph.add_node("gate_cost_outlier", gates.gate_cost_outlier)
+    graph.add_node("build_market_segments", nodes.build_market_segments)
     graph.add_node("research_segment", nodes.research_segment)
     graph.add_node("extract_and_ground_products", nodes.extract_and_ground_products)
     graph.add_node("generate_narratives", nodes.generate_narratives)
@@ -173,9 +174,10 @@ def build_graph(checkpointer: Any = None) -> Any:
     graph.add_edge("apply_recommendation_policy", "detect_cost_outliers")
     graph.add_edge("detect_cost_outliers", "explain_cost_outliers")
     graph.add_edge("explain_cost_outliers", "gate_cost_outlier")
+    graph.add_edge("gate_cost_outlier", "build_market_segments")
 
     graph.add_conditional_edges(
-        "gate_cost_outlier", _fan_out_market, ["research_segment", "extract_and_ground_products"]
+        "build_market_segments", _fan_out_market, ["research_segment", "extract_and_ground_products"]
     )
     graph.add_edge("research_segment", "extract_and_ground_products")
 
