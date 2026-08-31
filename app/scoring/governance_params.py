@@ -163,6 +163,26 @@ model judged it explainable or not. Same reasoned-default, pending-
 validation status as QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD -- 0.7
 is a starting point, not an empirically derived value."""
 
+# --- Consumed by narrative/generator.py (branch 14) ---
+
+NARRATIVE_MAX_ATTEMPTS = 2
+"""CLAUDE.md section 5: narrative generation is "bounded retry-once" --
+one initial draft plus at most one regeneration when the deterministic
+grounding check rejects the first. The spec fixes this at 2; it lives
+here only so no consumer hardcodes the number, and it is a hard stopping
+rule in code, never the model's judgment about whether to try again.
+After the last attempt still fails grounding, the stage falls back to
+deterministic structured bullets and routes the item to gate 5."""
+
+NARRATIVE_RETRY_TEMPERATURE = 0.2
+"""Not itemized in CLAUDE.md section 12's table. The first narrative
+draft is generated at temperature 0.0, like every other structured call
+in this codebase; a second attempt at 0.0 would reproduce the first
+almost verbatim and fail the same grounding check, so the regeneration
+runs slightly warmer to actually explore a different phrasing. Low
+enough to stay a controlled retry, not a diverse-sampling ensemble.
+Not golden-subset validated."""
+
 # --- Not yet consumed by any existing branch. Transcribed now so every
 # governance number has exactly one home from the start (CLAUDE.md
 # section 12: "No second copy anywhere else in the codebase"). Each
