@@ -134,13 +134,41 @@ ensemble temperatures (0.7) used elsewhere in this codebase for
 deliberately diverse sampling, since this call's samples are never
 voted against each other. Not yet validated against the golden subset."""
 
+# --- Consumed by cost_intelligence/{outlier_detection,explainability}.py
+# (branch 11) ---
+
+MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER = 5
+"""Fixed (CLAUDE.md section 12). Below this many peers with a *known*
+cost-per-FTE in the same capability cluster, refuse to flag a cost
+outlier rather than manufacture a signal from noise -- a peer whose cost
+is withheld does not count toward this floor, since it contributes
+nothing to the peer statistics being compared against."""
+
+COST_OUTLIER_IQR_MULTIPLIER = 1.5
+"""Not itemized in CLAUDE.md section 12's table. The interquartile-range
+("Tukey's fence") rule -- flag outside [Q1 - k*IQR, Q3 + k*IQR] -- rather
+than a z-score/standard-deviation rule, because IQR is robust to the
+small peer-cluster sizes this system actually has (the floor above is
+only 5) and to the outliers it is trying to detect, which would
+otherwise inflate the standard deviation a z-score depends on. 1.5 is
+the standard Tukey convention, not an invented value, but it is still
+listed here as CLAUDE.md section 12 requires -- unlike the LLM-tuned
+parameters elsewhere in this module, it does not need golden-subset
+validation to justify it; the convention is external and well-established."""
+
+COST_OUTLIER_EXPLAINABILITY_CONFIDENCE_THRESHOLD = 0.7
+"""CLAUDE.md section 10: a cost outlier whose explainability check
+returns confidence below this goes to gate 4, regardless of whether the
+model judged it explainable or not. Same reasoned-default, pending-
+validation status as QUALITATIVE_ESCALATION_CONFIDENCE_THRESHOLD -- 0.7
+is a starting point, not an empirically derived value."""
+
 # --- Not yet consumed by any existing branch. Transcribed now so every
 # governance number has exactly one home from the start (CLAUDE.md
 # section 12: "No second copy anywhere else in the codebase"). Each
 # MUST be read from here, never re-hardcoded, once its owning branch
 # lands. ---
 
-MIN_PEER_CLUSTER_SIZE_FOR_COST_OUTLIER = 5
-"""Owned by: feat/cost-outlier-detection (branch 11). Below this
-cluster size, refuse to flag a cost outlier rather than manufacture a
-signal from noise."""
+# (none currently -- every governance parameter above is consumed by a
+# landed branch. Future branches add their not-yet-wired parameters here
+# first, then move them up to a "Consumed by" section on landing.)
