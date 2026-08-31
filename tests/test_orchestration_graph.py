@@ -58,6 +58,7 @@ _REAL_BUILD_MARKET_SEGMENTS = nodes.build_market_segments
 _REAL_STAGE_MARKET_RESEARCH = nodes._stage_market_research
 _REAL_EXTRACT_AND_GROUND_PRODUCTS = nodes.extract_and_ground_products
 _REAL_GENERATE_NARRATIVES = nodes.generate_narratives
+_REAL_RENDER_REPORT = nodes.render_report
 """Captured at import time, before the autouse fixture below ever runs,
 so a test that wants the real wiring back can restore it explicitly."""
 
@@ -117,14 +118,18 @@ def _fake_generate_narratives(state):
     return {"stage_log": [nodes._stage("generate_narratives")]}
 
 
+def _fake_render_report(state):
+    return {"report": {}, "stage_log": [nodes._stage("render_report")]}
+
+
 @pytest.fixture(autouse=True)
 def _no_real_llm_calls_in_this_file(monkeypatch):
     """This file tests orchestration control flow, not what
     classify_disclosure, calibrate_rubrics, score_row,
     block_capabilities, build_profiles, adjudicate_cluster,
     explain_cost_outliers, research_segment,
-    extract_and_ground_products, or generate_narratives themselves
-    compute (see
+    extract_and_ground_products, generate_narratives, or render_report
+    themselves compute (see
     tests/test_disclosure_classifier.py, tests/test_rubric_calibration.py,
     tests/test_qualitative_scoring.py, tests/test_blocking.py,
     tests/test_profile_builder.py, tests/test_redundancy_adjudicator.py,
@@ -133,8 +138,9 @@ def _no_real_llm_calls_in_this_file(monkeypatch):
     tests/test_cost_outlier_explainability.py,
     tests/test_market_intelligence_segments.py,
     tests/test_market_intelligence_graph.py,
-    tests/test_market_intelligence_extraction.py, and
-    tests/test_narrative_generator.py). Autouse so no test
+    tests/test_market_intelligence_extraction.py,
+    tests/test_narrative_generator.py, tests/test_report_service.py, and
+    tests/test_report_renderer.py). Autouse so no test
     here can accidentally reach a real provider or a real search --
     including on a machine that happens to have real GROQ_API_KEY/
     TAVILY_API_KEY exported -- and so the rest of this file's tests can
@@ -167,6 +173,7 @@ def _no_real_llm_calls_in_this_file(monkeypatch):
     monkeypatch.setattr(nodes, "_stage_market_research", _fake_stage_market_research)
     monkeypatch.setattr(nodes, "extract_and_ground_products", _fake_extract_and_ground_products)
     monkeypatch.setattr(nodes, "generate_narratives", _fake_generate_narratives)
+    monkeypatch.setattr(nodes, "render_report", _fake_render_report)
 
 EXPECTED_NODES = {
     "ingest",
@@ -1106,6 +1113,38 @@ def test_generate_narratives_delegates_to_the_real_module_and_wires_gate_5(monke
     assert set(final["narratives"]) == {"SYN-001", "SYN-002"}
     assert stops == [gates.GATE_RUBRIC_SIGNOFF, gates.GATE_NARRATIVE_GROUNDING]
     assert final["gate_decisions"][gates.GATE_NARRATIVE_GROUNDING]["reviewed_subject_ids"] == ["SYN-002"]
+
+
+def test_render_report_delegates_to_the_real_module(monkeypatch):
+    """Verifies the wiring this branch adds: render_report calls
+    app.reporting.report_service.build_report over the run state and
+    app.reporting.report_renderer.render_markdown over its result,
+    writing both under state["report"] -- deterministic, so no provider
+    mocking is needed."""
+    from app.reporting import report_renderer, report_service
+
+    monkeypatch.setattr(nodes, "render_report", _REAL_RENDER_REPORT)
+
+    seen = {}
+    real_build_report = report_service.build_report
+
+    def spy_build_report(state):
+        seen["run_id"] = state.get("run_id")
+        return real_build_report(state)
+
+    monkeypatch.setattr(nodes.report_service, "build_report", spy_build_report)
+
+    graph = build_graph(build_in_memory_checkpointer())
+    final, _ = _run_to_completion(graph, _full_run_state(), run_config("t-render-wiring"))
+
+    assert seen["run_id"] == "run-synthetic"
+    report = final["report"]
+    assert report["run_id"] == "run-synthetic"
+    assert "portfolio_summary" in report and "applications" in report and "run_integrity" in report
+    assert report["markdown"] == report_renderer.render_markdown(
+        {k: v for k, v in report.items() if k != "markdown"}
+    )
+    assert report["markdown"].startswith("# APR Portfolio Rationalization Report")
 
 
 def test_detect_cost_outliers_delegates_to_the_real_module(monkeypatch):

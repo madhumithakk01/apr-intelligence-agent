@@ -169,6 +169,11 @@ class GraphState(TypedDict, total=False):
     Written by the linear generate_narratives stage."""
 
     report: Dict[str, Any]
+    """The finished report: a portfolio summary, one entry per scored
+    application, a run-integrity section (ingestion collisions, failed
+    branches, gates fired), and a rendered "markdown" string
+    (app.reporting, branch 15). Written once by the linear render_report
+    stage; this is what the async job endpoint (branch 16) serves."""
 
     review_queue: Annotated[List[ReviewItem], extend]
     gate_decisions: Annotated[Dict[str, Dict[str, Any]], merge_by_key]

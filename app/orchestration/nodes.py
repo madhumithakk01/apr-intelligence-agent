@@ -1,9 +1,9 @@
 """Pipeline stage nodes for the orchestration graph.
 
-Most nodes here are still deliberate stubs (IMPLEMENTED_BY records which
-future branch replaces each one, and each stub is honest about it rather
-than returning a plausible-looking fake result -- a stub that invented
-an output would let a later branch's tests pass for the wrong reason).
+Every stage is now real. IMPLEMENTED_BY (pending) is empty and LANDED_BY
+records, per stage, the branch that made it real; a stub that invented
+an output would have let a later branch's tests pass for the wrong
+reason, so each stage stayed an honest pass-through until its own branch.
 
 ``ingest`` and ``classify_disclosure`` have been real since
 feat/disclosure-classifier (branch 6); ``calibrate_rubrics`` joined them
@@ -28,9 +28,12 @@ structured call over the agent's kept search evidence, plus a
 deterministic claim-level grounding check. ``generate_narratives`` joins
 them now, in feat/narrative-generation (branch 14): one structured call
 per application with a fixed one-retry budget and a deterministic
-structured-bullet fallback (CLAUDE.md section 5). LANDED_BY records each
-transition to real the same way IMPLEMENTED_BY records a pending one, so
-the stage log always says which is which.
+structured-bullet fallback (CLAUDE.md section 5). ``render_report`` joins
+them last, in feat/report-rendering-consolidation (branch 15): a
+deterministic assemble-then-render pass (app.reporting) that is the one
+rendering path, replacing the divergent legacy renderers. LANDED_BY
+records each transition to real the same way IMPLEMENTED_BY recorded a
+pending one, so the stage log always says which is which.
 
 Fan-out workers (``classify_disclosure``, ``score_row``,
 ``adjudicate_cluster``, ``research_segment``) never raise past their own
@@ -40,10 +43,10 @@ delegates its body to a ``_stage_*`` function purely so that isolation
 is testable by substituting one. ``calibrate_rubrics``, ``apply_scoring_
 kernel``, ``block_capabilities``, ``build_profiles``,
 ``detect_cost_outliers``, ``explain_cost_outliers``,
-``build_market_segments``, ``extract_and_ground_products``, and
-``generate_narratives`` are linear nodes, not fanned out, and have no
-such split -- each has exactly one call site (a module-level function
-elsewhere) for a test to substitute.
+``build_market_segments``, ``extract_and_ground_products``,
+``generate_narratives``, and ``render_report`` are linear nodes, not
+fanned out, and have no such split -- each has exactly one call site (a
+module-level function elsewhere) for a test to substitute.
 """
 
 from __future__ import annotations
@@ -72,14 +75,15 @@ from app.qualitative_scoring import scorer as qualitative_scorer
 from app.redundancy import adjudicator, blocking
 from app.redundancy import profile_builder as profile_builder_module
 from app.redundancy import recommendation_policy
+from app.reporting import report_renderer, report_service
 from app.rubric import calibration as rubric_calibration
 from app.scoring import kernel
 
 logger = logging.getLogger(__name__)
 
-IMPLEMENTED_BY = {
-    "render_report": "feat/report-rendering-consolidation (15)",
-}
+IMPLEMENTED_BY: Dict[str, str] = {}
+"""Empty: every pipeline stage is real. A future stage would be added
+here as a pending stub, then moved to LANDED_BY once its branch lands."""
 
 LANDED_BY = {
     "ingest": "fix/ingestion-integrity (2) + feat/disclosure-classifier (6, wiring)",
@@ -97,6 +101,7 @@ LANDED_BY = {
     "research_segment": "feat/market-intelligence-agent (12)",
     "extract_and_ground_products": "feat/product-extraction-grounding (13)",
     "generate_narratives": "feat/narrative-generation (14)",
+    "render_report": "feat/report-rendering-consolidation (15)",
 }
 
 
@@ -467,10 +472,14 @@ def generate_narratives(state: GraphState) -> Dict[str, Any]:
 
 
 def render_report(state: GraphState) -> Dict[str, Any]:
-    """Deterministic rendering, into the single consolidated renderer
-    that replaces the current duplicate report_service/report_renderer
-    pair."""
-    return {"report": dict(state.get("report") or {}), "stage_log": [_stage("render_report")]}
+    """Deterministic assemble-then-render (app.reporting, branch 15) --
+    the one rendering path (CLAUDE.md section 5). report_service builds
+    the structured report dict from the finished run state;
+    report_renderer turns it into Markdown, carried alongside the dict
+    under state["report"]["markdown"]. Pure: no LLM call, no file I/O."""
+    report = report_service.build_report(state)
+    report["markdown"] = report_renderer.render_markdown(report)
+    return {"report": report, "stage_log": [_stage("render_report")]}
 
 
 # --- fanned-out branch bodies ----------------------------------------------
