@@ -9,9 +9,6 @@ It is a portfolio-scale batch pipeline: rationalisation is inherently
 cross-portfolio (redundancy across departments, cost outliers relative
 to peers), so the whole file is processed together, not row by row.
 
-`CLAUDE.md` is the architecture specification and the source of truth
-for every rule and parameter below.
-
 ## Pipeline
 
 A single LangGraph run, submitted as an async job (a ~100-row run is
