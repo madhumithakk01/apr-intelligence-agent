@@ -148,7 +148,17 @@ class GraphState(TypedDict, total=False):
     a Scale-Tiered Overlap yields two differently-framed targets)."""
 
     market_findings: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
+    """segment_id -> the market agent's conclusion dict
+    (app.market_intelligence.graph), including the raw search evidence it
+    kept for the grounding step below."""
+
     grounded_claims: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
+    """segment_id -> report-ready product list whose every claim has been
+    substring-verified against that segment's retrieved search text
+    (app.market_intelligence.extraction, CLAUDE.md section 5). Populated
+    by the linear extract_and_ground_products stage once the market
+    fan-out has joined; keyed the same way as market_findings."""
+
     narratives: Annotated[Dict[str, Dict[str, Any]], merge_by_key]
     report: Dict[str, Any]
 

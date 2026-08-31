@@ -18,11 +18,14 @@ profile (branch 9), which built the modules they call but, based
 strictly on refactor/scoring-kernel-consolidation (branch 3), never had
 this graph in its own ancestry to wire them into. ``detect_cost_outliers``
 and ``explain_cost_outliers`` joined them in feat/cost-outlier-detection
-(branch 11). ``build_market_segments`` and ``research_segment`` join them
-now, in feat/market-intelligence-agent (branch 12) -- the only genuine
+(branch 11). ``build_market_segments`` and ``research_segment`` joined
+them in feat/market-intelligence-agent (branch 12) -- the only genuine
 agent in this system (CLAUDE.md section 3): a real LangGraph loop
 (app.market_intelligence.graph), not a single call or a bounded ensemble
-like every other LLM-backed stage here. LANDED_BY records each
+like every other LLM-backed stage here. ``extract_and_ground_products``
+joins them now, in feat/product-extraction-grounding (branch 13): a
+single structured call over the agent's kept search evidence, plus a
+deterministic claim-level grounding check. LANDED_BY records each
 transition to real the same way IMPLEMENTED_BY records a pending one, so
 the stage log always says which is which.
 
@@ -33,10 +36,10 @@ the remaining branches finish normally (CLAUDE.md section 8). Each
 delegates its body to a ``_stage_*`` function purely so that isolation
 is testable by substituting one. ``calibrate_rubrics``, ``apply_scoring_
 kernel``, ``block_capabilities``, ``build_profiles``,
-``detect_cost_outliers``, ``explain_cost_outliers``, and
-``build_market_segments`` are linear nodes, not fanned out, and have no
-such split -- each has exactly one call site (a module-level function
-elsewhere) for a test to substitute.
+``detect_cost_outliers``, ``explain_cost_outliers``,
+``build_market_segments``, and ``extract_and_ground_products`` are linear
+nodes, not fanned out, and have no such split -- each has exactly one
+call site (a module-level function elsewhere) for a test to substitute.
 """
 
 from __future__ import annotations
@@ -49,6 +52,7 @@ from app.disclosure import classifier as disclosure_classifier
 from app.ingestion.excel_loader import ExcelLoader
 from app.ingestion.row_mapping import build_application_fields
 from app.llm.providers import DataSensitivity
+from app.market_intelligence import extraction as market_extraction
 from app.market_intelligence import graph as market_intelligence_graph
 from app.market_intelligence import segments as market_segments
 from app.orchestration import gates
@@ -69,7 +73,6 @@ from app.scoring import kernel
 logger = logging.getLogger(__name__)
 
 IMPLEMENTED_BY = {
-    "extract_and_ground_products": "feat/product-extraction-grounding (13)",
     "generate_narratives": "feat/narrative-generation (14)",
     "render_report": "feat/report-rendering-consolidation (15)",
 }
@@ -88,6 +91,7 @@ LANDED_BY = {
     "explain_cost_outliers": "feat/cost-outlier-detection (11)",
     "build_market_segments": "feat/market-intelligence-agent (12)",
     "research_segment": "feat/market-intelligence-agent (12)",
+    "extract_and_ground_products": "feat/product-extraction-grounding (13)",
 }
 
 
@@ -400,10 +404,21 @@ def build_market_segments(state: GraphState) -> Dict[str, Any]:
 
 
 def extract_and_ground_products(state: GraphState) -> Dict[str, Any]:
-    """Single structured extraction call plus a deterministic
-    claim-level grounding check -- every individual claim, not just the
-    product name (section 5)."""
-    return {"stage_log": [_stage("extract_and_ground_products")]}
+    """Single structured extraction call per researched segment
+    (app.market_intelligence.extraction, branch 13), plus a
+    deterministic claim-level grounding check against the search text the
+    market agent kept -- every individual claim, not just the product
+    name (CLAUDE.md section 5). Linear, not fanned out: the market
+    fan-out has already joined by here, and each segment's extraction
+    stands on its own finding. A provider failure yields an empty
+    grounded list for that segment (never an ungrounded one), recorded
+    with an error rather than crashing the batch."""
+    grounded = market_extraction.extract_and_ground_all(
+        state.get("market_findings") or {},
+        state.get("segments") or [],
+        data_sensitivity=_data_sensitivity(state),
+    )
+    return {"grounded_claims": grounded, "stage_log": [_stage("extract_and_ground_products")]}
 
 
 def generate_narratives(state: GraphState) -> Dict[str, Any]:

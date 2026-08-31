@@ -56,6 +56,7 @@ _REAL_DETECT_COST_OUTLIERS = nodes.detect_cost_outliers
 _REAL_EXPLAIN_COST_OUTLIERS = nodes.explain_cost_outliers
 _REAL_BUILD_MARKET_SEGMENTS = nodes.build_market_segments
 _REAL_STAGE_MARKET_RESEARCH = nodes._stage_market_research
+_REAL_EXTRACT_AND_GROUND_PRODUCTS = nodes.extract_and_ground_products
 """Captured at import time, before the autouse fixture below ever runs,
 so a test that wants the real wiring back can restore it explicitly."""
 
@@ -107,39 +108,46 @@ def _fake_stage_market_research(task):
     return {}
 
 
+def _fake_extract_and_ground_products(state):
+    return {"stage_log": [nodes._stage("extract_and_ground_products")]}
+
+
 @pytest.fixture(autouse=True)
 def _no_real_llm_calls_in_this_file(monkeypatch):
     """This file tests orchestration control flow, not what
     classify_disclosure, calibrate_rubrics, score_row,
     block_capabilities, build_profiles, adjudicate_cluster,
-    explain_cost_outliers, or research_segment themselves compute (see
+    explain_cost_outliers, research_segment, or
+    extract_and_ground_products themselves compute (see
     tests/test_disclosure_classifier.py, tests/test_rubric_calibration.py,
     tests/test_qualitative_scoring.py, tests/test_blocking.py,
     tests/test_profile_builder.py, tests/test_redundancy_adjudicator.py,
     tests/test_recommendation_policy.py,
     tests/test_cost_outlier_detection.py,
     tests/test_cost_outlier_explainability.py,
-    tests/test_market_intelligence_segments.py, and
-    tests/test_market_intelligence_graph.py). Autouse so no test here can
-    accidentally reach a real provider or a real search -- including on
-    a machine that happens to have real GROQ_API_KEY/TAVILY_API_KEY
-    exported -- and so the rest of this file's tests can keep pre-setting
-    state["clusters"]/state["profiles"]/state["segments"] directly
-    (_full_run_state below) without block_capabilities/build_profiles/
-    detect_cost_outliers/build_market_segments silently recomputing and
-    overwriting them from state["applications"]/state["verdicts"], or
-    crashing on the placeholder SYNTHETIC_PROFILES shape when trying to
-    deserialize it as a real ApplicationProfile. A test that cares about
-    the real wiring restores the captured original above, which simply
-    shadows this fixture's patch for that one test. apply_scoring_kernel,
-    apply_recommendation_policy, and detect_cost_outliers need no
-    provider fake for the calls they make: all are fully deterministic
-    (app.scoring.kernel and app.redundancy.recommendation_policy
-    respectively) and never call a provider regardless.
-    detect_cost_outliers and build_market_segments are also
-    deterministic but still get one here -- the former to avoid the
-    profile-deserialization crash just described, the latter to keep the
-    pre-set state["segments"] fixture from being silently recomputed."""
+    tests/test_market_intelligence_segments.py,
+    tests/test_market_intelligence_graph.py, and
+    tests/test_market_intelligence_extraction.py). Autouse so no test
+    here can accidentally reach a real provider or a real search --
+    including on a machine that happens to have real GROQ_API_KEY/
+    TAVILY_API_KEY exported -- and so the rest of this file's tests can
+    keep pre-setting state["clusters"]/state["profiles"]/state["segments"]
+    directly (_full_run_state below) without block_capabilities/
+    build_profiles/detect_cost_outliers/build_market_segments silently
+    recomputing and overwriting them from state["applications"]/
+    state["verdicts"], or crashing on the placeholder SYNTHETIC_PROFILES
+    shape when trying to deserialize it as a real ApplicationProfile. A
+    test that cares about the real wiring restores the captured original
+    above, which simply shadows this fixture's patch for that one test.
+    apply_scoring_kernel, apply_recommendation_policy, and
+    detect_cost_outliers need no provider fake for the calls they make:
+    all are fully deterministic (app.scoring.kernel and
+    app.redundancy.recommendation_policy respectively) and never call a
+    provider regardless. detect_cost_outliers and build_market_segments
+    are also deterministic but still get one here -- the former to avoid
+    the profile-deserialization crash just described, the latter to keep
+    the pre-set state["segments"] fixture from being silently
+    recomputed."""
     monkeypatch.setattr(nodes, "_stage_disclosure", _fake_stage_disclosure)
     monkeypatch.setattr(nodes, "calibrate_rubrics", _fake_calibrate_rubrics)
     monkeypatch.setattr(nodes, "_stage_qualitative", _fake_stage_qualitative)
@@ -150,6 +158,7 @@ def _no_real_llm_calls_in_this_file(monkeypatch):
     monkeypatch.setattr(nodes, "explain_cost_outliers", _fake_explain_cost_outliers)
     monkeypatch.setattr(nodes, "build_market_segments", _fake_build_market_segments)
     monkeypatch.setattr(nodes, "_stage_market_research", _fake_stage_market_research)
+    monkeypatch.setattr(nodes, "extract_and_ground_products", _fake_extract_and_ground_products)
 
 EXPECTED_NODES = {
     "ingest",
@@ -1009,6 +1018,49 @@ def test_stage_market_research_delegates_to_the_real_agent_module(monkeypatch):
     assert set(run_ids) == {"run-synthetic"}
     assert set(sensitivities) == {"synthetic"}
     assert set(final["market_findings"]) == {seg["segment_id"] for seg in SYNTHETIC_SEGMENTS}
+
+
+def test_extract_and_ground_products_delegates_to_the_real_module(monkeypatch):
+    """Verifies the wiring this branch adds: extract_and_ground_products
+    passes state["market_findings"] and state["segments"] to
+    app.market_intelligence.extraction.extract_and_ground_all and writes
+    the result under state["grounded_claims"], keyed by segment id --
+    without exercising the extraction call's own LLM internals (its own
+    test module's job)."""
+    from app.llm.providers import DataSensitivity
+    from app.market_intelligence import extraction as market_extraction
+
+    monkeypatch.setattr(nodes, "extract_and_ground_products", _REAL_EXTRACT_AND_GROUND_PRODUCTS)
+    monkeypatch.setattr(
+        nodes,
+        "_stage_market_research",
+        lambda task: {
+            "segment_id": task["segment"]["segment_id"],
+            "application_id": "SYN-001",
+            "products": [{"name": "Vendor X", "vendor": "X Co", "rationale": "r", "source_url": "https://x.example"}],
+            "evidence": [{"title": "t", "url": "https://x.example", "content": "Vendor X is a claims intake platform."}],
+            "no_viable_alternative_found": False,
+        },
+    )
+
+    seen = {}
+
+    def fake_extract_and_ground_all(findings, segments=None, *, data_sensitivity):
+        seen["finding_keys"] = set(findings)
+        seen["segment_ids"] = {s["segment_id"] for s in (segments or [])}
+        seen["data_sensitivity"] = data_sensitivity
+        return {segment_id: {"segment_id": segment_id, "products": []} for segment_id in findings}
+
+    monkeypatch.setattr(market_extraction, "extract_and_ground_all", fake_extract_and_ground_all)
+
+    graph = build_graph(build_in_memory_checkpointer())
+    final, _ = _run_to_completion(graph, _full_run_state(), run_config("t-extract-wiring"))
+
+    expected_segments = {seg["segment_id"] for seg in SYNTHETIC_SEGMENTS}
+    assert seen["finding_keys"] == expected_segments
+    assert seen["segment_ids"] == expected_segments
+    assert seen["data_sensitivity"] is DataSensitivity.SYNTHETIC
+    assert set(final["grounded_claims"]) == expected_segments
 
 
 def test_detect_cost_outliers_delegates_to_the_real_module(monkeypatch):
