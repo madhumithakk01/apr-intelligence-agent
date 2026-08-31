@@ -1,10 +1,8 @@
 from sqlalchemy import Column
-from sqlalchemy import DateTime
 from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import Text
-from sqlalchemy.sql import func
 
 from app.database.db import Base
 
@@ -72,19 +70,3 @@ class Application(Base):
     business_capability_l3 = Column(String)
 
     numeric_field_notes = Column(Text)
-
-
-class MarketProduct(Base):
-
-    __tablename__ = "market_products"
-
-    id = Column(Integer, primary_key=True, index=True)
-    domain_key = Column(String, index=True)
-    query = Column(String, index=True)
-    product_name = Column(String, index=True)
-    vendor = Column(String)
-    source_title = Column(String)
-    source_url = Column(String)
-    snippet = Column(Text)
-    structured_json = Column(Text)
-    fetched_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
