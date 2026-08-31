@@ -37,6 +37,9 @@ from typing import Callable, List, Optional
 from app.orchestration.checkpointer import purge_checkpoint_store
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# applications is the live table; market_products and analysis_runs were
+# dropped with the legacy path but a pre-existing deployment may still
+# carry them with client data, so the purge clears them if present.
 _APP_DB_CLIENT_TABLES = ("applications", "market_products", "analysis_runs")
 
 
