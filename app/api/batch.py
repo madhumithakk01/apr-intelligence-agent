@@ -39,6 +39,11 @@ class RunSubmission(BaseModel):
     """CLAUDE.md section 11: defaults to "real" so an omitted flag fails
     closed -- the Groq-only routing applies unless a caller deliberately
     declares synthetic fixtures."""
+    run_mode: Literal["shadow", "live"] = "shadow"
+    """CLAUDE.md section 2: defaults to "shadow" (internal review only).
+    A "live" run still runs, but its report is not client-deliverable
+    until a shadow run for the engagement has been signed off
+    (POST /api/shadow/signoff)."""
 
 
 class ResumeRequest(BaseModel):
@@ -61,7 +66,9 @@ def _view_or_404(runner: BatchRunner, run_id: str) -> Dict[str, Any]:
 
 @router.post("", status_code=202)
 def submit_run(body: RunSubmission, runner: BatchRunner = Depends(_runner_dep)) -> Dict[str, Any]:
-    run_id = runner.submit(body.applications, data_sensitivity=body.data_sensitivity)
+    run_id = runner.submit(
+        body.applications, data_sensitivity=body.data_sensitivity, run_mode=body.run_mode
+    )
     return _view_or_404(runner, run_id)
 
 
@@ -69,6 +76,7 @@ def submit_run(body: RunSubmission, runner: BatchRunner = Depends(_runner_dep)) 
 def submit_run_from_file(
     file: UploadFile = File(...),
     data_sensitivity: Literal["real", "synthetic"] = Form("real"),
+    run_mode: Literal["shadow", "live"] = Form("shadow"),
     runner: BatchRunner = Depends(_runner_dep),
 ) -> Dict[str, Any]:
     filename = file.filename or ""
@@ -77,7 +85,9 @@ def submit_run_from_file(
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     destination = UPLOAD_DIR / f"{uuid4().hex}_{Path(filename).name}"
     destination.write_bytes(file.file.read())
-    run_id = runner.submit([], data_sensitivity=data_sensitivity, dataset_path=str(destination))
+    run_id = runner.submit(
+        [], data_sensitivity=data_sensitivity, dataset_path=str(destination), run_mode=run_mode
+    )
     return _view_or_404(runner, run_id)
 
 

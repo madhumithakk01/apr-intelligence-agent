@@ -154,12 +154,30 @@ def _run_integrity_section(report: Dict[str, Any]) -> List[str]:
     return lines
 
 
+def _delivery_banner(report: Dict[str, Any]) -> List[str]:
+    """A report that is not client-deliverable says so, loudly, right
+    under the title -- CLAUDE.md section 2."""
+    delivery = report.get("delivery") or {}
+    if delivery.get("client_deliverable"):
+        return []
+    label = (
+        "SHADOW RUN -- INTERNAL REVIEW ONLY"
+        if delivery.get("run_mode") == "shadow"
+        else "NOT CLIENT-DELIVERABLE"
+    )
+    return [
+        f"> **{label}.** {_fmt(delivery.get('reason'))}",
+        "",
+    ]
+
+
 def render_markdown(report: Dict[str, Any]) -> str:
     """The one rendering path: structured report dict -> Markdown."""
-    lines = [
-        "# APR Portfolio Rationalization Report",
-        "",
+    lines = ["# APR Portfolio Rationalization Report", ""]
+    lines += _delivery_banner(report)
+    lines += [
         f"- Run: {_fmt(report.get('run_id'))}",
+        f"- Mode: {_fmt(report.get('run_mode'))}",
         f"- Data sensitivity: {_fmt(report.get('data_sensitivity'))}",
         "",
     ]

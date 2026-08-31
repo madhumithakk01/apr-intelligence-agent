@@ -33,7 +33,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
-from app.orchestration import gates, nodes
+from app.orchestration import gates, nodes, shadow
 from app.orchestration.state import GraphState
 
 DEFAULT_RECURSION_LIMIT = 50
@@ -202,13 +202,19 @@ def initial_state(
     run_id: str,
     applications: Optional[Sequence[Dict[str, Any]]] = None,
     data_sensitivity: str = "real",
+    run_mode: str = "shadow",
 ) -> GraphState:
     """Default run input. ``data_sensitivity`` defaults to "real" so an
     omitted flag fails closed -- the strict provider routing (Groq only,
     never Gemini) applies unless a caller deliberately declares synthetic
-    fixtures (CLAUDE.md section 11)."""
+    fixtures (CLAUDE.md section 11). ``run_mode`` defaults to "shadow"
+    for the same reason: a run is internal-review-only unless a caller
+    deliberately asks for "live", and even then its report is not
+    client-deliverable until a shadow run has been signed off
+    (app.orchestration.shadow, CLAUDE.md section 2)."""
     return GraphState(
         run_id=run_id,
         data_sensitivity=data_sensitivity,
+        run_mode=shadow.normalize_mode(run_mode),
         applications=list(applications or []),
     )

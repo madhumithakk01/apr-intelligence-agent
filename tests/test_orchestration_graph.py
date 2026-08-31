@@ -1113,22 +1113,27 @@ def test_generate_narratives_delegates_to_the_real_module_and_wires_gate_5(monke
     assert final["gate_decisions"][gates.GATE_NARRATIVE_GROUNDING]["reviewed_subject_ids"] == ["SYN-002"]
 
 
-def test_render_report_delegates_to_the_real_module(monkeypatch):
+def test_render_report_delegates_to_the_real_module(monkeypatch, tmp_path):
     """Verifies the wiring this branch adds: render_report calls
     app.reporting.report_service.build_report over the run state and
     app.reporting.report_renderer.render_markdown over its result,
     writing both under state["report"] -- deterministic, so no provider
-    mocking is needed."""
+    mocking is needed. The shadow ledger is pointed at a tmp file so the
+    run's shadow-run record does not touch the real one."""
+    from app.orchestration import shadow
     from app.reporting import report_renderer, report_service
 
     monkeypatch.setattr(nodes, "render_report", _REAL_RENDER_REPORT)
+    monkeypatch.setattr(
+        nodes.shadow, "default_ledger", lambda: shadow.ShadowLedger(tmp_path / "ledger.json")
+    )
 
     seen = {}
     real_build_report = report_service.build_report
 
-    def spy_build_report(state):
+    def spy_build_report(state, **kwargs):
         seen["run_id"] = state.get("run_id")
-        return real_build_report(state)
+        return real_build_report(state, **kwargs)
 
     monkeypatch.setattr(nodes.report_service, "build_report", spy_build_report)
 
@@ -1139,6 +1144,7 @@ def test_render_report_delegates_to_the_real_module(monkeypatch):
     report = final["report"]
     assert report["run_id"] == "run-synthetic"
     assert "portfolio_summary" in report and "applications" in report and "run_integrity" in report
+    assert report["run_mode"] == "shadow" and report["delivery"]["client_deliverable"] is False
     assert report["markdown"] == report_renderer.render_markdown(
         {k: v for k, v in report.items() if k != "markdown"}
     )

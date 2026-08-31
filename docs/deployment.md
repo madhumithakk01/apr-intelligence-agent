@@ -65,6 +65,25 @@ Both stores move to Postgres at the same time, at two swap points:
 No pipeline code changes: every stage already treats the checkpointer as
 opaque.
 
+## Shadow mode (CLAUDE.md section 2)
+
+Nothing the pipeline produces is client-deliverable until a full run has
+executed in **shadow mode** and an internal reviewer has signed it off.
+
+- Every run defaults to `run_mode: "shadow"`. `POST /api/runs` and
+  `/api/runs/upload` accept `"shadow"` or `"live"`.
+- A shadow run's report is stamped `delivery.client_deliverable: false`
+  and the Markdown carries a `SHADOW RUN -- INTERNAL REVIEW ONLY`
+  banner. A `live` run is stamped non-deliverable too until the
+  engagement is unlocked.
+- `GET /api/shadow` shows engagement status; `POST /api/shadow/signoff`
+  (`{run_id, reviewer, decision}`) records a reviewer's verdict. An
+  approved sign-off of a completed shadow run unlocks
+  `client_deliverable: true` for subsequent `live` runs.
+- Engagement state is a JSON ledger at `SHADOW_LEDGER_PATH` (default
+  `knowledge_db/shadow_ledger.json`) -- ephemeral on the free tier, same
+  Postgres migration point as everything else.
+
 ## CI
 
 - `.github/workflows/golden-subset.yml` — the required check: the
@@ -79,6 +98,7 @@ outcome, not a TTL. On that trigger, clear all of:
 
 - `purge_checkpoint_store()` for each checkpoint DB;
 - the application DB rows / file;
+- the shadow-mode ledger (`knowledge_db/shadow_ledger.json`);
 - the LangSmith project (out of band, in LangSmith);
 - any uploaded workbooks under `knowledge_db/batch_uploads/` and
   generated files under `reports/`.

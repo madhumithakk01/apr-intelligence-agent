@@ -21,10 +21,24 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from app.orchestration.shadow import normalize_mode
 from app.orchestration.state import GraphState
 from app.scoring import governance_params as gp
 
 _TIME_DECISION_ORDER = ("Invest", "Migrate", "Tolerate", "Eliminate")
+
+
+def _unevaluated_delivery(run_mode: str) -> Dict[str, Any]:
+    """Fail-safe stamp when build_report is called without a delivery
+    verdict (render_report always supplies one; this covers direct
+    callers and tests). Never client-deliverable -- CLAUDE.md section 2."""
+    return {
+        "run_mode": run_mode,
+        "client_deliverable": False,
+        "shadow_signoff_on_record": False,
+        "reason": "Delivery gate not evaluated for this report -- treated as not client-deliverable "
+                  "(CLAUDE.md section 2).",
+    }
 
 
 def _sorted_application_ids(kernel_results: Dict[str, Dict[str, Any]]) -> List[str]:
@@ -152,10 +166,15 @@ def _portfolio_summary(
     }
 
 
-def build_report(state: GraphState) -> Dict[str, Any]:
+def build_report(state: GraphState, *, delivery: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Assemble the structured report dict from a finished run. Always
     returns the full shape -- an empty portfolio yields zero-count
-    summaries and an empty application list, not a missing section."""
+    summaries and an empty application list, not a missing section.
+
+    ``delivery`` is the shadow-mode verdict
+    (app.orchestration.shadow.ShadowLedger.delivery_status) the
+    render_report node computes; when omitted the report is stamped
+    not-client-deliverable (CLAUDE.md section 2)."""
     kernel_results = state.get("kernel_results") or {}
     narratives = state.get("narratives") or {}
     verdicts = state.get("verdicts") or []
@@ -231,9 +250,12 @@ def build_report(state: GraphState) -> Dict[str, Any]:
             }
         )
 
+    run_mode = normalize_mode(state.get("run_mode"))
     return {
         "run_id": state.get("run_id"),
         "data_sensitivity": state.get("data_sensitivity"),
+        "run_mode": run_mode,
+        "delivery": delivery or _unevaluated_delivery(run_mode),
         "portfolio_summary": _portfolio_summary(
             kernel_results, verdicts, cost_outliers, grounded_claims, phase2_agenda
         ),
