@@ -21,6 +21,8 @@ from google import genai
 from google.genai import types as genai_types
 from google.genai.errors import ClientError as GeminiClientError
 
+from app.llm import tracing
+
 # --- constants -------------------------------------------------------------
 # Reference data and model names only. Rate limits are NOT enforced in this
 # module — the async batch job runner (branch 16) is the place that must
@@ -247,8 +249,23 @@ def _get_fallback_provider(sensitivity: DataSensitivity) -> GeminiProvider:
     return GeminiProvider(sensitivity=sensitivity)
 
 
-# TODO(tracing): wire LangSmith call-logging here once rubric versioning
-# exists — see CLAUDE.md §15.
+def _traced_complete(
+    provider: LLMProvider,
+    request: LLMRequest,
+    sensitivity: DataSensitivity,
+    attempt: str,
+) -> LLMResponse:
+    """One provider call, wrapped in a LangSmith run (app.llm.tracing).
+    The wrapper is a no-op unless tracing is configured and never
+    changes what this returns or raises -- a rate limit still propagates
+    to get_completion's retry logic, now with the failed attempt
+    recorded."""
+    with tracing.record_llm_call(request=request, sensitivity=sensitivity, attempt=attempt) as span:
+        response = provider.complete(request)
+        span.set_response(response)
+        return response
+
+
 def get_completion(sensitivity: DataSensitivity, request: LLMRequest) -> LLMResponse:
     """The single entry point every caller in this system should use.
 
@@ -257,19 +274,24 @@ def get_completion(sensitivity: DataSensitivity, request: LLMRequest) -> LLMResp
     not a loop). Gemini is only ever considered after two failed Groq
     attempts, and only when sensitivity permits it — real data raises
     ProviderUnavailableError instead of silently falling back.
+
+    Every attempt -- primary, retry, and any fallback -- is traced to
+    LangSmith (CLAUDE.md §15): prompt, response or error, model,
+    sensitivity flag, and timing.
     """
     groq_provider = GroqProvider()
     try:
-        return groq_provider.complete(request)
+        return _traced_complete(groq_provider, request, sensitivity, "groq-primary")
     except RateLimitError:
         pass
 
     try:
-        return groq_provider.complete(request)
+        return _traced_complete(groq_provider, request, sensitivity, "groq-retry")
     except RateLimitError as exc:
         if sensitivity is not DataSensitivity.SYNTHETIC:
             raise ProviderUnavailableError(
                 "Groq is rate-limited and DataSensitivity.REAL may never fall back to Gemini"
             ) from exc
-        fallback = _get_fallback_provider(sensitivity)
-        return fallback.complete(request)
+        return _traced_complete(
+            _get_fallback_provider(sensitivity), request, sensitivity, "gemini-fallback"
+        )
